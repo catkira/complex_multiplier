@@ -11,6 +11,7 @@ with warnings.catch_warnings():
     warnings.simplefilter('ignore')
     from cocotb.generators.byte import random_data, get_bytes
 
+from complex_multiplier_model import Model
 
 CLK_PERIOD_NS = 100
 
@@ -42,32 +43,34 @@ async def single_multiplication_(dut):
     input_width_b = int(dut.INPUT_WIDTH_B.value)
     output_width = int(dut.OUTPUT_WIDTH.value)
 
-    a_i = FixedPoint(int.from_bytes(get_bytes(int(input_width_a/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_a/2)
-    a_r = FixedPoint(int.from_bytes(get_bytes(int(input_width_a/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_a/2)
-    b_r = FixedPoint(int.from_bytes(get_bytes(int(input_width_b/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_b/2)
-    b_i = FixedPoint(int.from_bytes(get_bytes(int(input_width_b/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_b/2)
+    a_bytes = get_bytes(int(input_width_a/8),random_data())
+    b_bytes = get_bytes(int(input_width_b/8),random_data())
+    signFlag = False
+    a_i = FixedPoint(int.from_bytes(a_bytes[0:int(len(a_bytes)/2)], byteorder='big',signed=signFlag), signed=signFlag,m=input_width_a/2)
+    a_r = FixedPoint(int.from_bytes(a_bytes[int(len(a_bytes)/2):len(a_bytes)], byteorder='big',signed=signFlag), signed=signFlag,m=input_width_a/2)
+    b_r = FixedPoint(int.from_bytes(b_bytes[int(len(b_bytes)/2):len(b_bytes)], byteorder='big',signed=signFlag), signed=signFlag,m=input_width_b/2)
+    b_i = FixedPoint(int.from_bytes(b_bytes[0:int(len(b_bytes)/2)], byteorder='big',signed=signFlag), signed=signFlag,m=input_width_b/2)
     numStages = 3
 
-    a_i.resize(input_width_a,0)
-    dut.s_axis_a_tdata <= int((a_i << int(input_width_a/2)) + a_r)
-    b_i.resize(input_width_a,0)
-    dut.s_axis_b_tdata <= int((b_i << int(input_width_b/2)) + b_r)
+    dut.s_axis_a_tdata <= int.from_bytes(a_bytes, byteorder='big', signed=signFlag)
+    dut.s_axis_b_tdata <= int.from_bytes(b_bytes, byteorder='big', signed=signFlag)
     await Timer(CLK_PERIOD_NS * numStages, units='ns')
 
-    receivedValue = int(dut.m_axis_tdata).to_bytes(length=int(output_width/8),byteorder='big',signed=False)
-    received_i = receivedValue[int(len(receivedValue)/2):len(receivedValue)]
-    received_r = receivedValue[0:int(len(receivedValue)/2)]
+    receivedData = dut.m_axis_tdata.value.buff
+    received_r = receivedData[int(len(receivedData)/2):len(receivedData)]
+    received_i = receivedData[0:int(len(receivedData)/2)]
 
     await Timer(CLK_PERIOD_NS * 2, units='ns')
-    calculated_r = int(int(a_r*b_r) - int(a_i*b_i)).to_bytes(byteorder='big',length=2,signed=True)
-    # imag part can overfow even if output witdt is input_width_a + input_width_b
-    # therefore implement a truncation mechanism here using FixedPoint(...)
-    calculated_i = int(FixedPoint(a_r*b_i + a_i*b_r,signed=False,m=int(output_width/2),overflow_alert='ignore')).to_bytes(byteorder='big',length=2,signed=False)
+    model = Model(input_width_a,input_width_b,output_width) 
+    calculatedData = model.calculate(a_bytes,b_bytes)
+    calculated_i = calculatedData[0:int(output_width/8/2)]
+    calculated_r = calculatedData[int(output_width/8/2):int(output_width/8)]
     assert received_r == calculated_r, ("(%i + j%i) * (%i + j%i), real part should have been "
                            "%i but was %i " % (a_r,a_i,b_r,b_i,
-                           int(a_r*b_r) - int(a_i*b_i),received_r))
+                           int.from_bytes(calculated_r,byteorder='big',signed=signFlag),int.from_bytes(received_r,byteorder='big',signed=signFlag)))
     assert received_i == calculated_i, ("(%i + j%i) * (%i + j%i), imaginary part should have been "
                            "%i but was %i " % (a_r,a_i,b_r,b_i,
-                           a_r*b_i + a_i*b_r,received_i))
+                           int.from_bytes(calculated_i,byteorder='big',signed=signFlag),int.from_bytes(received_i,byteorder='big',signed=signFlag)))
+    assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
     #dut._log.info("0x%08X * 0x%08X" % (A, B))
 

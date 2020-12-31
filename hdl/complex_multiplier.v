@@ -30,7 +30,7 @@ module complex_multiplier
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
     // stage2: calculate p_r and p_i
 
-    reg [OUTPUT_WIDTH/2-1:0] ar_br, ai_bi, ar_bi, ai_br;
+    reg signed [OUTPUT_WIDTH/2-1:0] ar_br, ai_bi, ar_bi, ai_br;
 
     wire [INPUT_WIDTH_A/2-1:0] a_r;
     wire [INPUT_WIDTH_A/2-1:0] a_i;
@@ -51,7 +51,7 @@ module complex_multiplier
             m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
         end
         else begin
-            if (TRUNC_BITS != 0) begin
+            if (TRUNC_BITS == 0) begin
             // no rounding or truncation needed
                 ar_br <= a_r * b_r;
                 ai_bi <= a_i * b_i;
@@ -69,7 +69,7 @@ module complex_multiplier
                 // TODO: implement rounding
                 end
             end
-            m_axis_tdata <= {{ar_br - ai_bi},{ar_bi + ai_br}};
+            m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
         end
     end
 endmodule
