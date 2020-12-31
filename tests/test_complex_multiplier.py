@@ -20,7 +20,7 @@ def setup_dut(dut):
 
 # Test single multiplication
 @cocotb.test()
-async def single_multiplication_0(dut):
+async def single_multiplication_(dut):
     """Perform a single multiplication of two complex numbers
 
     Test ID: 0
@@ -60,7 +60,9 @@ async def single_multiplication_0(dut):
 
     await Timer(CLK_PERIOD_NS * 2, units='ns')
     calculated_r = int(int(a_r*b_r) - int(a_i*b_i)).to_bytes(byteorder='big',length=2,signed=True)
-    calculated_i = int(a_r*b_i + a_i*b_r).to_bytes(byteorder='big',length=2,signed=True)
+    # imag part can overfow even if output witdt is input_width_a + input_width_b
+    # therefore implement a truncation mechanism here using FixedPoint(...)
+    calculated_i = int(FixedPoint(a_r*b_i + a_i*b_r,signed=False,m=int(output_width/2),overflow_alert='ignore')).to_bytes(byteorder='big',length=2,signed=False)
     assert received_r == calculated_r, ("(%i + j%i) * (%i + j%i), real part should have been "
                            "%i but was %i " % (a_r,a_i,b_r,b_i,
                            int(a_r*b_r) - int(a_i*b_i),received_r))
@@ -69,4 +71,3 @@ async def single_multiplication_0(dut):
                            a_r*b_i + a_i*b_r,received_i))
     #dut._log.info("0x%08X * 0x%08X" % (A, B))
 
-	
