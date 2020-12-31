@@ -1,8 +1,16 @@
+`timescale 1ns/1ps
+
+`ifdef VERILATOR  // make parameter readable from VPI
+  `define VL_RD /*verilator public_flat_rd*/
+`else
+  `define VL_RD
+`endif
+
 module complex_multiplier
-    #(parameter INPUT_WIDTH_A = 16,
-      parameter INPUT_WIDTH_B = 16,
-      parameter OUTPUT_WIDTH = 32,
-      parameter TRUNCATE = 1)
+    #(parameter int INPUT_WIDTH_A `VL_RD = 16,
+      parameter int INPUT_WIDTH_B `VL_RD = 16,
+      parameter int OUTPUT_WIDTH `VL_RD = 32,
+      parameter TRUNCATE `VL_RD = 1)
     (   
         input wire             clk, rst,
         // slave a

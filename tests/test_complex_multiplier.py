@@ -7,6 +7,11 @@ from fixedpoint import FixedPoint
 import random
 import warnings
 
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore')
+    from cocotb.generators.byte import random_data, get_bytes
+
+
 CLK_PERIOD_NS = 100
 
 
@@ -33,14 +38,14 @@ async def single_multiplication_0(dut):
     dut.rst <= 1
     await Timer(CLK_PERIOD_NS * 2, units='ns')
 	
-    input_width_a = 16
-    input_width_b = 16
-    output_width = 32
+    input_width_a = int(dut.INPUT_WIDTH_A.value)
+    input_width_b = int(dut.INPUT_WIDTH_B.value)
+    output_width = int(dut.OUTPUT_WIDTH.value)
 
-    a_r = FixedPoint(0x10, signed=True,m=input_width_a/2)
-    a_i = FixedPoint(0x20, signed=True,m=input_width_a/2)
-    b_r = FixedPoint(2, signed=True,m=input_width_a/2)
-    b_i = FixedPoint(3, signed=True,m=input_width_a/2)
+    a_i = FixedPoint(int.from_bytes(get_bytes(int(input_width_a/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_a/2)
+    a_r = FixedPoint(int.from_bytes(get_bytes(int(input_width_a/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_a/2)
+    b_r = FixedPoint(int.from_bytes(get_bytes(int(input_width_b/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_b/2)
+    b_i = FixedPoint(int.from_bytes(get_bytes(int(input_width_b/2/8),random_data()), byteorder='big',signed=False), signed=False,m=input_width_b/2)
     numStages = 3
 
     a_i.resize(input_width_a,0)
@@ -50,15 +55,16 @@ async def single_multiplication_0(dut):
     await Timer(CLK_PERIOD_NS * numStages, units='ns')
 
     receivedValue = int(dut.m_axis_tdata).to_bytes(length=int(output_width/8),byteorder='big',signed=False)
-    received_i = int.from_bytes(receivedValue[int(len(receivedValue)/2):len(receivedValue)], byteorder='big', signed=True)
-    received_r = int.from_bytes(receivedValue[0:int(len(receivedValue)/2)],byteorder='big',signed=True)
+    received_i = receivedValue[int(len(receivedValue)/2):len(receivedValue)]
+    received_r = receivedValue[0:int(len(receivedValue)/2)]
 
-    correctResult = (FixedPoint(a_r*b_r - a_i*b_i,True,output_width)<<int(output_width/2)) + FixedPoint(a_r*b_r - a_i*b_i,True,output_width)
     await Timer(CLK_PERIOD_NS * 2, units='ns')
-    assert received_r == a_r*b_r - a_i*b_i, ("(%i + j%i) * (%i + j%i), real part should have been "
+    calculated_r = int(int(a_r*b_r) - int(a_i*b_i)).to_bytes(byteorder='big',length=2,signed=True)
+    calculated_i = int(a_r*b_i + a_i*b_r).to_bytes(byteorder='big',length=2,signed=True)
+    assert received_r == calculated_r, ("(%i + j%i) * (%i + j%i), real part should have been "
                            "%i but was %i " % (a_r,a_i,b_r,b_i,
-                           a_r*b_r - a_i*b_i,received_r))
-    assert received_i == a_r*b_i + a_i*b_r, ("(%i + j%i) * (%i + j%i), imaginary part should have been "
+                           int(a_r*b_r) - int(a_i*b_i),received_r))
+    assert received_i == calculated_i, ("(%i + j%i) * (%i + j%i), imaginary part should have been "
                            "%i but was %i " % (a_r,a_i,b_r,b_i,
                            a_r*b_i + a_i*b_r,received_i))
     #dut._log.info("0x%08X * 0x%08X" % (A, B))
