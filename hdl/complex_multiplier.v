@@ -14,15 +14,15 @@ module complex_multiplier
     (   
         input wire             clk, rst,
         // slave a
-        input             [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
+        input signed            [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
         output wire                           s_axis_a_tready,
         input wire                            s_axis_a_tvalid,
         // slave b
-        input             [INPUT_WIDTH_B-1:0] s_axis_b_tdata,
+        input signed            [INPUT_WIDTH_B-1:0] s_axis_b_tdata,
         output wire                           s_axis_b_tready,
         input wire                            s_axis_b_tvalid,
         // master output
-        output reg 		  [OUTPUT_WIDTH-1:0] m_axis_tdata,
+        output reg signed		  [OUTPUT_WIDTH-1:0] m_axis_tdata,
         output wire                          m_axis_tvalid,
         input wire                           m_axis_tready
         );
@@ -32,10 +32,10 @@ module complex_multiplier
 
     reg signed [OUTPUT_WIDTH/2-1:0] ar_br, ai_bi, ar_bi, ai_br;
 
-    wire [INPUT_WIDTH_A/2-1:0] a_r;
-    wire [INPUT_WIDTH_A/2-1:0] a_i;
-    wire [INPUT_WIDTH_B/2-1:0] b_r;
-    wire [INPUT_WIDTH_B/2-1:0] b_i;
+    wire signed [INPUT_WIDTH_A/2-1:0] a_r;
+    wire signed [INPUT_WIDTH_A/2-1:0] a_i;
+    wire signed [INPUT_WIDTH_B/2-1:0] b_r;
+    wire signed [INPUT_WIDTH_B/2-1:0] b_i;
     assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
     assign a_r = s_axis_a_tdata[INPUT_WIDTH_A/2-1:0];
     assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
