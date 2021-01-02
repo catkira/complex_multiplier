@@ -11,7 +11,8 @@ module complex_multiplier
       parameter int INPUT_WIDTH_B `VL_RD = 16,
       parameter int OUTPUT_WIDTH `VL_RD = 32,
       parameter int STAGES `VL_RD = 3,
-      parameter TRUNCATE `VL_RD = 1)
+      parameter bit BLOCKING `VL_RD = 0,
+      parameter bit TRUNCATE `VL_RD = 1)
     (   
         input wire             clk, rst,
         // slave a
@@ -59,42 +60,48 @@ module complex_multiplier
                 tdata[i] <= {OUTPUT_WIDTH{1'b0}};
         end
         else begin
-            if (TRUNC_BITS == 0) begin
-            // no rounding or truncation needed
-                ar_br <= a_r * b_r;
-                ai_bi <= a_i * b_i;
-                ar_bi <= a_r * b_i;
-                ai_br <= a_i * b_r;
+            if (BLOCKING == 1 && m_axis_tready == 0) begin
+                m_axis_tvalid <= 0;
+                m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
             end
             else begin
-                if (TRUNCATE == 1) begin
-                    ar_br <= ((a_r * b_r)>>TRUNC_BITS);
-                    ai_bi <= ((a_i * b_i)>>TRUNC_BITS);
-                    ar_bi <= ((a_r * b_i)>>TRUNC_BITS);
-                    ai_br <= ((a_i * b_r)>>TRUNC_BITS);                 
+                if (TRUNC_BITS == 0) begin
+                // no rounding or truncation needed
+                    ar_br <= a_r * b_r;
+                    ai_bi <= a_i * b_i;
+                    ar_bi <= a_r * b_i;
+                    ai_br <= a_i * b_r;
                 end
                 else begin
-                // TODO: implement rounding
+                    if (TRUNCATE == 1) begin
+                        ar_br <= ((a_r * b_r)>>TRUNC_BITS);
+                        ai_bi <= ((a_i * b_i)>>TRUNC_BITS);
+                        ar_bi <= ((a_r * b_i)>>TRUNC_BITS);
+                        ai_br <= ((a_i * b_r)>>TRUNC_BITS);                 
+                    end
+                    else begin
+                    // TODO: implement rounding
+                    end
                 end
-            end
-            
-            // propagate valid bit through pipeline
-            tvalid[0] <= 1;
-            for (i = 1; i<STAGES; i = i+1) begin
-                tvalid[i] <= tvalid[i-1];
-            end
-            m_axis_tvalid <= tvalid[STAGES-1];
-            
-            // propagate data through pipeline, 1 cycle is already used for calculation
-            if (STAGES > 2) begin
-                tdata[0] <= {{ar_bi + ai_br},{ar_br - ai_bi}};
-                for (i = 1; i<STAGES-2; i = i+1) begin
-                    tdata[i] <= tdata[i-1];
+                
+                // propagate valid bit through pipeline
+                tvalid[0] <= 1;
+                for (i = 1; i<STAGES; i = i+1) begin
+                    tvalid[i] <= tvalid[i-1];
                 end
-                m_axis_tdata <= tdata[STAGES-1];
-            end
-            else begin
-                m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                m_axis_tvalid <= tvalid[STAGES-1];
+                
+                // propagate data through pipeline, 1 cycle is already used for calculation
+                if (STAGES > 2) begin
+                    tdata[0] <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                    for (i = 1; i<STAGES-2; i = i+1) begin
+                        tdata[i] <= tdata[i-1];
+                    end
+                    m_axis_tdata <= tdata[STAGES-1];
+                end
+                else begin
+                    m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                end
             end
         end
     end
