@@ -3,6 +3,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import Timer
 from cocotb.triggers import RisingEdge, ReadOnly
 from fixedpoint import FixedPoint
+from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink, AxiStreamMonitor
+from collections import deque
 
 import random
 import warnings
@@ -30,17 +32,18 @@ class TB(object):
         
         cocotb.fork(Clock(dut.clk, CLK_PERIOD_NS, units='ns').start())
         
+        #self.source = AxiStreamSource(dut, "s_axis_a", dut.clk, dut.rst)
+        self.sink = AxiStreamSink(dut, "m_axis", dut.clk, dut.rst)        
+        self.monitor = AxiStreamMonitor(dut, "m_axis", dut.clk, dut.rst)
+        
     async def cycle_reset(self):
-        self.dut.rst.setimmediatevalue(1)
-        await RisingEdge(self.dut.clk)
-        await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
         self.dut.rst <= 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-
+        self.dut.rst <= 0
 
 
 # Test single multiplication
@@ -57,15 +60,21 @@ async def single_multiplication_(dut):
     a_bytes = get_bytes(int(tb.input_width_a/8),random_data())
     b_bytes = get_bytes(int(tb.input_width_b/8),random_data())
 
+    # send data, ignore tready
     dut.s_axis_a_tdata <= int.from_bytes(a_bytes, byteorder='big', signed=False)
+    dut.s_axis_a_tvalid <= 1    
     dut.s_axis_b_tdata <= int.from_bytes(b_bytes, byteorder='big', signed=False)
-    await Timer(CLK_PERIOD_NS * tb.stages, units='ns')
-
-    receivedData = dut.m_axis_tdata.value.buff
+    dut.s_axis_b_tvalid <= 1    
+    await RisingEdge(dut.clk)
+    dut.s_axis_a_tvalid <= 0
+    dut.s_axis_b_tvalid <= 0    
+        
+    rx_frame = await tb.sink.recv()
+    receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='big', length=int(tb.output_width/8))
+    print(receivedData.hex())
     received_r = receivedData[int(len(receivedData)/2):len(receivedData)]
     received_i = receivedData[0:int(len(receivedData)/2)]
 
-    await Timer(CLK_PERIOD_NS * 2, units='ns')
     model = Model(tb.input_width_a,tb.input_width_b,tb.output_width) 
     calculatedData = model.calculate(a_bytes,b_bytes)
     calculated_i = calculatedData[0:int(tb.output_width/8/2)]
@@ -75,28 +84,41 @@ async def single_multiplication_(dut):
     assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
                            (int.from_bytes(calculated_i,byteorder='big',signed=True),int.from_bytes(received_i,byteorder='big',signed=True)))
     assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
+    await RisingEdge(dut.clk)
     #dut._log.info("0x%08X * 0x%08X" % (A, B))
 
 # Test multiple multiplications
 @cocotb.test()
 async def multiple_multiplications_(dut):
-    tb = TB(dut)
+    tb = TB(dut)    
     await tb.cycle_reset()
-    
-    for k in range(20):
+    #tb.sink.queue = deque() # remove remaining items from last test    
+    test_frames = []
+    for i in range(20):
         a_bytes = get_bytes(int(tb.input_width_a/8),random_data())
         b_bytes = get_bytes(int(tb.input_width_b/8),random_data())
-
+        
+        # send data, ignore tready
         dut.s_axis_a_tdata <= int.from_bytes(a_bytes, byteorder='big', signed=False)
+        dut.s_axis_a_tvalid <= 1
         dut.s_axis_b_tdata <= int.from_bytes(b_bytes, byteorder='big', signed=False)
-        await Timer(CLK_PERIOD_NS * tb.stages, units='ns')
+        dut.s_axis_b_tvalid <= 1
+        test_frame = AxiStreamFrame([a_bytes,b_bytes])
+        test_frames.append(test_frame)
+        await RisingEdge(dut.clk)
+        
+    dut.s_axis_a_tvalid <= 0
+    dut.s_axis_b_tvalid <= 0
+    await RisingEdge(dut.clk)    
 
-        receivedData = dut.m_axis_tdata.value.buff
+    for test_frame in test_frames:
+        rx_frame = await tb.sink.recv()
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='big', length=int(tb.output_width/8), signed=False)
         received_r = receivedData[int(len(receivedData)/2):len(receivedData)]
         received_i = receivedData[0:int(len(receivedData)/2)]
 
         model = Model(tb.input_width_a,tb.input_width_b,tb.output_width) 
-        calculatedData = model.calculate(a_bytes,b_bytes)
+        calculatedData = model.calculate(test_frame.tdata[0],test_frame.tdata[1])
         calculated_i = calculatedData[0:int(tb.output_width/8/2)]
         calculated_r = calculatedData[int(tb.output_width/8/2):int(tb.output_width/8)]
         assert received_r == calculated_r, ("real part should have been %i but was %i " % 
@@ -104,3 +126,4 @@ async def multiple_multiplications_(dut):
         assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
                             (int.from_bytes(calculated_i,byteorder='big',signed=True),int.from_bytes(received_i,byteorder='big',signed=True)))
         assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
+        await RisingEdge(dut.clk)
