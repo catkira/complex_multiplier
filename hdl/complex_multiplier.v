@@ -7,21 +7,21 @@
 `endif
 
 module complex_multiplier
-    #(parameter int INPUT_WIDTH_A `VL_RD = 16,
-      parameter int INPUT_WIDTH_B `VL_RD = 16,
-      parameter int OUTPUT_WIDTH `VL_RD = 32,
-      parameter int STAGES `VL_RD = 3,
+    #(parameter int INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 8
+      parameter int INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 8
+      parameter int OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
+      parameter int STAGES `VL_RD = 3,  // minimum value is 2
       parameter bit BLOCKING `VL_RD = 0,
       parameter bit TRUNCATE `VL_RD = 1)
     (   
         input wire             clk, rst,
         // slave a
         input signed            [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
-        output wire                           s_axis_a_tready,
+        output reg                            s_axis_a_tready,
         input wire                            s_axis_a_tvalid,
         // slave b
         input signed            [INPUT_WIDTH_B-1:0] s_axis_b_tdata,
-        output wire                           s_axis_b_tready,
+        output reg                            s_axis_b_tready,
         input wire                            s_axis_b_tvalid,
         // master output
         output reg signed		  [OUTPUT_WIDTH-1:0] m_axis_tdata,
@@ -44,8 +44,6 @@ module complex_multiplier
     assign a_r = s_axis_a_tdata[INPUT_WIDTH_A/2-1:0];
     assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
     assign b_r = s_axis_b_tdata[INPUT_WIDTH_B/2-1:0];
-    assign s_axis_a_tready = 1;
-    assign s_axis_b_tready = 1;
     
     localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
 
@@ -63,11 +61,17 @@ module complex_multiplier
             ar_br <= {OUTPUT_WIDTH{1'b0}};
         end
         else begin
-            if (BLOCKING == 1 && m_axis_tready == 0) begin
+            // wait for receiver to be ready
+            if (BLOCKING == 1 && m_axis_tready == 0 && m_axis_tvalid == 1) begin 
                 m_axis_tvalid <= 0;
                 m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
+                // apply back pressure
+                s_axis_a_tready <= 0;
+                s_axis_b_tready <= 0;
             end
             else begin
+                s_axis_a_tready <= 1;
+                s_axis_b_tready <= 1;
                 if (TRUNC_BITS == 0) begin
                 // no rounding or truncation needed
                     ar_br <= a_r * b_r;
@@ -88,6 +92,8 @@ module complex_multiplier
                 end
                 
                 // propagate valid bit through pipeline
+                // so far the input is only sampled if input a and b are valid at the same timescale
+                // dont know if separate sampling of a and b is necessary/useful
                 tvalid[0] <= s_axis_a_tvalid & s_axis_b_tvalid;
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
