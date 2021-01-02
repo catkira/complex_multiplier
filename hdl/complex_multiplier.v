@@ -14,7 +14,7 @@ module complex_multiplier
       parameter bit BLOCKING `VL_RD = 0,
       parameter bit TRUNCATE `VL_RD = 1)
     (   
-        input wire             clk, rst,
+        input wire             clk, nrst,
         // slave a
         input signed            [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
@@ -25,7 +25,7 @@ module complex_multiplier
         input wire                            s_axis_b_tvalid,
         // master output
         output reg signed		  [OUTPUT_WIDTH-1:0] m_axis_tdata,
-        output wire                          m_axis_tvalid,
+        output reg                          m_axis_tvalid,
         input wire                           m_axis_tready
         );
     // p = a*b = p_r + jp_i = (a_r*b_r - a_i*b_i) + j(a_r*b_i + a_i*b_r)
@@ -49,7 +49,7 @@ module complex_multiplier
 
     integer i;
     always @(posedge clk) begin
-        if (rst) begin
+        if (nrst == 0) begin
             m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
             m_axis_tvalid <= 0;
             tvalid <= {{(STAGES){1'b0}}};
@@ -61,7 +61,7 @@ module complex_multiplier
             ar_br <= {OUTPUT_WIDTH{1'b0}};
         end
         else begin
-            // wait for receiver to be ready
+            // wait for receiver to be ready if BLOCKING is enabled
             if (BLOCKING == 1 && m_axis_tready == 0 && m_axis_tvalid == 1) begin 
                 m_axis_tvalid <= 0;
                 m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
@@ -92,9 +92,17 @@ module complex_multiplier
                 end
                 
                 // propagate valid bit through pipeline
-                // so far the input is only sampled if input a and b are valid at the same timescale
-                // dont know if separate sampling of a and b is necessary/useful
-                tvalid[0] <= s_axis_a_tvalid & s_axis_b_tvalid;
+                // if BLOCKING is enabled the inputs are only sampled when both inputs are valid at the same time
+                // when only one input is valid, the output wont have valid set
+                // if only one input is valid, data loss occurs!
+                // TODO: Implement separate sampling of input channels and then wait until both are sampled
+                // if BLOCKING is disabled, input data is sampled even if only one input is valid
+                if (BLOCKING == 1) begin
+                    tvalid[0] <= s_axis_a_tvalid & s_axis_b_tvalid;
+                end
+                else begin
+                    tvalid[0] <= s_axis_a_tvalid | s_axis_b_tvalid;
+                end
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
                 end

@@ -1,16 +1,31 @@
-PWD=$(shell pwd)
-SIM=verilator
-VERILATOR_TRACE=1
+PWD     =  $(shell pwd)
+SIM     =  verilator
+VERILATOR_TRACE = 0
 
-VERILOG_SOURCES = $(PWD)/../hdl/complex_multiplier.v
+DUT         = complex_multiplier
+TOPLEVEL    = $(DUT)
+MODULE      = test_$(DUT)
 
-TOPLEVEL := complex_multiplier
-MODULE := test_complex_multiplier
+VERILOG_SOURCES = $(PWD)/../hdl/$(DUT).v
 
-export PYTHONPATH := $(PWD)/../model:$(PYTHONPATH)
+# module parameters
+export INPUT_WIDTH_A ?= 16
+export INPUT_WIDTH_B ?= 16
+export OUTPUT_WIDTH   ?= 32
+export BLOCKING       ?= 1
+export TRUNCATE       ?= 1
 
-ifeq ($(SIM),verilator)
+
+ifeq ($(SIM), verilator)
     EXTRA_ARGS += $(PWD)/verilator_waiver.vlt
+	#COMPILE_ARGS += -Wno-SELRANGE -Wno-WIDTH -Wno-CASEINCOMPLETE
+
+	COMPILE_ARGS += -GINPUT_WIDTH_A=$(INPUT_WIDTH_A)
+	COMPILE_ARGS += -GINPUT_WIDTH_B=$(INPUT_WIDTH_B)
+	COMPILE_ARGS += -GOUTPUT_WIDTH=$(OUTPUT_WIDTH)
+	COMPILE_ARGS += -GBLOCKING=$(BLOCKING)
+	COMPILE_ARGS += -GTRUNCATE=$(TRUNCATE)
 endif
+
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
