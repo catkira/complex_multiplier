@@ -7,12 +7,12 @@
 `endif
 
 module complex_multiplier
-    #(parameter int INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 8
-      parameter int INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 8
-      parameter int OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
-      parameter int STAGES `VL_RD = 3,  // minimum value is 2
-      parameter bit BLOCKING `VL_RD = 0,
-      parameter bit TRUNCATE `VL_RD = 1)
+    #(parameter INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 8
+      parameter INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 8
+      parameter OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
+      parameter STAGES `VL_RD = 3,  // minimum value is 2
+      parameter BLOCKING `VL_RD = 1,
+      parameter TRUNCATE `VL_RD = 1)
     (   
         input wire             clk, nrst,
         // slave a
@@ -55,10 +55,10 @@ module complex_multiplier
             tvalid <= {{(STAGES){1'b0}}};
             for (i=0;i<(STAGES-1);i=i+1)
                 tdata[i] <= {OUTPUT_WIDTH{1'b0}};
-            ai_bi <= {OUTPUT_WIDTH{1'b0}};
-            ai_br <= {OUTPUT_WIDTH{1'b0}};
-            ar_bi <= {OUTPUT_WIDTH{1'b0}};
-            ar_br <= {OUTPUT_WIDTH{1'b0}};
+            ai_bi <= {(OUTPUT_WIDTH/2){1'b0}};
+            ai_br <= {(OUTPUT_WIDTH/2){1'b0}};
+            ar_bi <= {(OUTPUT_WIDTH/2){1'b0}};
+            ar_br <= {(OUTPUT_WIDTH/2){1'b0}};
         end
         else begin
             // wait for receiver to be ready if BLOCKING is enabled

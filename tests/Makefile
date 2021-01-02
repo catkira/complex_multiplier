@@ -12,7 +12,7 @@ VERILOG_SOURCES = $(PWD)/../hdl/$(DUT).v
 export INPUT_WIDTH_A ?= 16
 export INPUT_WIDTH_B ?= 16
 export OUTPUT_WIDTH   ?= 32
-export BLOCKING       ?= 1
+export BLOCKING       ?= 0
 export TRUNCATE       ?= 1
 
 
