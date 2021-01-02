@@ -10,6 +10,7 @@ module complex_multiplier
     #(parameter int INPUT_WIDTH_A `VL_RD = 16,
       parameter int INPUT_WIDTH_B `VL_RD = 16,
       parameter int OUTPUT_WIDTH `VL_RD = 32,
+      parameter int STAGES `VL_RD = 3,
       parameter TRUNCATE `VL_RD = 1)
     (   
         input wire             clk, rst,
@@ -31,6 +32,8 @@ module complex_multiplier
     // stage2: calculate p_r and p_i
 
     reg signed [OUTPUT_WIDTH/2-1:0] ar_br, ai_bi, ar_bi, ai_br;
+    reg        [STAGES-1:0]                    tvalid  ;
+    reg        [OUTPUT_WIDTH-1:0]              tdata [STAGES-2:0];
 
     wire signed [INPUT_WIDTH_A/2-1:0] a_r;
     wire signed [INPUT_WIDTH_A/2-1:0] a_i;
@@ -46,9 +49,14 @@ module complex_multiplier
     
     localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
 
+    integer i;
     always @(posedge clk) begin
         if (~rst) begin
             m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
+            m_axis_tvalid <= 0;
+            tvalid <= {{(STAGES){1'b0}}};
+            for (i=0;i<(STAGES-1);i=i+1)
+                tdata[i] <= {OUTPUT_WIDTH{1'b0}};
         end
         else begin
             if (TRUNC_BITS == 0) begin
@@ -69,7 +77,25 @@ module complex_multiplier
                 // TODO: implement rounding
                 end
             end
-            m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+            
+            // propagate valid bit through pipeline
+            tvalid[0] <= 1;
+            for (i = 1; i<STAGES; i = i+1) begin
+                tvalid[i] <= tvalid[i-1];
+            end
+            m_axis_tvalid <= tvalid[STAGES-1];
+            
+            // propagate data through pipeline, 1 cycle is already used for calculation
+            if (STAGES > 2) begin
+                tdata[0] <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                for (i = 1; i<STAGES-2; i = i+1) begin
+                    tdata[i] <= tdata[i-1];
+                end
+                m_axis_tdata <= tdata[STAGES-1];
+            end
+            else begin
+                m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+            end
         end
     end
 endmodule
