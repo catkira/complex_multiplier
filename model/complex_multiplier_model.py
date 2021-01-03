@@ -1,4 +1,5 @@
 from fixedpoint import FixedPoint
+from bitstring import BitArray
 
 class Model:
     def __init__(self, input_width_a, input_width_b, output_width):
@@ -9,10 +10,10 @@ class Model:
     def calculate(self, a, b):
         signFlag = True
         byteOrder = 'big'
-        a_i = FixedPoint(int.from_bytes(a[0:int(len(a)/2)], byteorder=byteOrder,signed=signFlag), signed=signFlag,m=self.input_width_a/2)
-        a_r = FixedPoint(int.from_bytes(a[int(len(a)/2):len(a)], byteorder=byteOrder,signed=signFlag), signed=signFlag,m=self.input_width_a/2)
-        b_i = FixedPoint(int.from_bytes(b[0:int(len(b)/2)], byteorder=byteOrder,signed=signFlag), signed=signFlag,m=self.input_width_b/2)
-        b_r = FixedPoint(int.from_bytes(b[int(len(b)/2):len(b)], byteorder=byteOrder,signed=signFlag), signed=signFlag,m=self.input_width_b/2)
+        a_i = FixedPoint("0b"+BitArray(a).bin[0:int(self.input_width_a/2)], signed=signFlag,m=self.input_width_a/2,n=0)
+        a_r = FixedPoint("0b"+BitArray(a).bin[int(self.input_width_a/2):], signed=signFlag,m=self.input_width_a/2,n=0)
+        b_i = FixedPoint("0b"+BitArray(b).bin[0:int(self.input_width_b/2)], signed=signFlag,m=self.input_width_b/2,n=0)
+        b_r = FixedPoint("0b"+BitArray(b).bin[int(self.input_width_b/2):], signed=signFlag,m=self.input_width_b/2,n=0)
         r_r = int(a_r*b_r) - int(a_i*b_i)
         r_i = int(a_r*b_i) + int(a_i*b_r)
         
