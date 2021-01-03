@@ -9,7 +9,7 @@ MODULE      = test_$(DUT)
 VERILOG_SOURCES = $(PWD)/../hdl/$(DUT).v
 
 # module parameters
-export INPUT_WIDTH_A ?= 24
+export INPUT_WIDTH_A ?= 32
 export INPUT_WIDTH_B ?= 16
 export OUTPUT_WIDTH   ?= 32
 export BLOCKING       ?= 0

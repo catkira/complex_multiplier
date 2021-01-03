@@ -10,11 +10,11 @@ class Model:
 
     def calculate(self, a, b, rounding_cy=0):
         signFlag = True
-        byteOrder = 'big'
-        a_i = FixedPoint("0b"+BitArray(a).bin[0:int(self.input_width_a/2)], signed=signFlag,m=self.input_width_a/2,n=0)
-        a_r = FixedPoint("0b"+BitArray(a).bin[int(self.input_width_a/2):], signed=signFlag,m=self.input_width_a/2,n=0)
-        b_i = FixedPoint("0b"+BitArray(b).bin[0:int(self.input_width_b/2)], signed=signFlag,m=self.input_width_b/2,n=0)
-        b_r = FixedPoint("0b"+BitArray(b).bin[int(self.input_width_b/2):], signed=signFlag,m=self.input_width_b/2,n=0)
+        byteOrder = 'little'
+        a_i = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[0:self.input_width_a//2], signed=signFlag,m=self.input_width_a/2,n=0)
+        a_r = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[self.input_width_a//2:], signed=signFlag,m=self.input_width_a/2,n=0)
+        b_i = FixedPoint("0b"+BitArray(b[::-1],endian=byteOrder).bin[0:self.input_width_b//2], signed=signFlag,m=self.input_width_b/2,n=0)
+        b_r = FixedPoint("0b"+BitArray(b[::-1],endian=byteOrder).bin[self.input_width_b//2:], signed=signFlag,m=self.input_width_b/2,n=0)
         r_r = int(a_r*b_r) - int(a_i*b_i)
         r_i = int(a_r*b_i) + int(a_i*b_r)
         
@@ -39,12 +39,12 @@ class Model:
             r_i = (r_i + biasCorrectionNumber) >> truncate_bits
         
         
-        r_r = int(FixedPoint(r_r,m=int(self.output_width/2),signed=signFlag,overflow_alert='ignore',overflow='wrap'))
-        r_i = int(FixedPoint(r_i,m=int(self.output_width/2),signed=signFlag,overflow_alert='ignore'))
-        r_bytes = r_r.to_bytes(byteorder=byteOrder,length=int(self.output_width/8/2),signed=signFlag)
-        i_bytes = r_i.to_bytes(byteorder=byteOrder,length=int(self.output_width/8/2),signed=signFlag)
-        result = bytearray(i_bytes)
-        result += r_bytes
-        # print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
-        # print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
+        r_r = int(FixedPoint(r_r,m=self.output_width//2,signed=signFlag,overflow_alert='ignore',overflow='wrap'))
+        r_i = int(FixedPoint(r_i,m=self.output_width//2,signed=signFlag,overflow_alert='ignore'))
+        r_bytes = r_r.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
+        i_bytes = r_i.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
+        result = bytearray(r_bytes)
+        result += i_bytes
+        #print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
+        #print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
         return result
