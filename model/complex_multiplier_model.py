@@ -2,12 +2,13 @@ from fixedpoint import FixedPoint
 from bitstring import BitArray
 
 class Model:
-    def __init__(self, input_width_a, input_width_b, output_width):
+    def __init__(self, input_width_a, input_width_b, output_width , truncate):
         self.input_width_a = input_width_a
         self.input_width_b = input_width_b
         self.output_width = output_width
+        self.truncate = truncate
 
-    def calculate(self, a, b):
+    def calculate(self, a, b, rounding_cy=0):
         signFlag = True
         byteOrder = 'big'
         a_i = FixedPoint("0b"+BitArray(a).bin[0:int(self.input_width_a/2)], signed=signFlag,m=self.input_width_a/2,n=0)
@@ -21,13 +22,22 @@ class Model:
         # its important to do truncation after the + and - operation, 
         # if truncation is done before that, the result is slightly different!
         truncate_bits = self.input_width_a + self.input_width_b - self.output_width
-        if True:
+        if self.truncate == 1:
             r_r = r_r >> truncate_bits
             r_i = r_i >> truncate_bits
         else: 
         # truncation with bias correction
-            r_r = (r_r + 2**(truncate_bits-1)) >> truncate_bits
-            r_i = (r_i + 2**(truncate_bits-1)) >> truncate_bits
+            biasCorrectionString = "0b0"
+            for i in range(truncate_bits-2):
+                biasCorrectionString += "1"
+            if (rounding_cy == 1):
+                biasCorrectionString += "1"
+            else:
+                biasCorrectionString += "0"
+            biasCorrectionNumber = FixedPoint(biasCorrectionString, signed=False,m=truncate_bits,n=0)
+            print(biasCorrectionNumber)
+            r_r = (r_r + biasCorrectionNumber) >> truncate_bits
+            r_i = (r_i + biasCorrectionNumber) >> truncate_bits
         
         
         r_r = int(FixedPoint(r_r,m=int(self.output_width/2),signed=signFlag,overflow_alert='ignore',overflow='wrap'))

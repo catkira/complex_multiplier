@@ -30,6 +30,7 @@ class TB(object):
         self.input_width_b = int(dut.INPUT_WIDTH_B.value)
         self.output_width = int(dut.OUTPUT_WIDTH.value)
         self.stages = int(dut.STAGES.value)
+        self.truncate = int(dut.TRUNCATE.value)
         
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)        
@@ -40,7 +41,7 @@ class TB(object):
         spec = importlib.util.spec_from_file_location("complex_multiplier_model", model_dir)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        self.model = foo.Model(self.input_width_a,self.input_width_b,self.output_width) 
+        self.model = foo.Model(self.input_width_a,self.input_width_b,self.output_width,self.truncate) 
 
         
         cocotb.fork(Clock(dut.clk, CLK_PERIOD_NS, units='ns').start())
