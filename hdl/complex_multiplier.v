@@ -54,15 +54,15 @@ module complex_multiplier
     wire signed [OUTPUT_WIDTH/2-1:0] result_r;
     wire signed [OUTPUT_WIDTH/2-1:0] result_i;
     wire signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] temp1,temp2;
-	if (TRUNCATE==1) begin
+	if (TRUNCATE == 1 || TRUNC_BITS == 0) begin
 		assign temp1 = (ar_br - ai_bi)>>>TRUNC_BITS;
 		assign temp2 = (ar_bi + ai_br)>>>TRUNC_BITS;  
 		assign result_r = temp1[OUTPUT_WIDTH/2-1:0];
 		assign result_i = temp2[OUTPUT_WIDTH/2-1:0];    
 	end
 	else begin
-		assign temp1 = (ar_br - ai_bi + {{1'b0},{TRUNC_BITS-1},{rounding_cy}})>>>TRUNC_BITS;
-		assign temp2 = (ar_bi + ai_br + {{1'b0},{TRUNC_BITS-1},{rounding_cy}})>>>TRUNC_BITS;
+		assign temp1 = (ar_br - ai_bi + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
+		assign temp2 = (ar_bi + ai_br + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
 		assign result_r = temp1[OUTPUT_WIDTH/2-1:0];
 		assign result_i = temp2[OUTPUT_WIDTH/2-1:0];    
 	end

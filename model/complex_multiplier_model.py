@@ -26,7 +26,7 @@ class Model:
             r_r = r_r >> truncate_bits
             r_i = r_i >> truncate_bits
         else: 
-        # truncation with bias correction
+        # rounding by adding 0.5 plus random bit to prevent bias
             biasCorrectionString = "0b0"
             for i in range(truncate_bits-1):
                 biasCorrectionString += "1"
