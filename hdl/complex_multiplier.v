@@ -14,7 +14,7 @@ module complex_multiplier
       parameter BLOCKING `VL_RD = 1,
       parameter TRUNCATE `VL_RD = 1)
     (   
-        input wire             clk, nrst,
+        input wire              aclk, aresetn,
 		inout wire				rounding_cy,
         // slave a
         input signed            [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
@@ -69,8 +69,8 @@ module complex_multiplier
 
 
     integer i;
-    always @(posedge clk) begin
-        if (nrst == 0) begin
+    always @(posedge aclk) begin
+        if (aresetn == 0) begin
             m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
             m_axis_tvalid <= 0;
             tvalid <= {{(STAGES+1){1'b0}}};

@@ -42,23 +42,23 @@ class TB(object):
         spec.loader.exec_module(foo)
         self.model = foo.Model(self.input_width_a,self.input_width_b,self.output_width,self.truncate) 
         
-        cocotb.fork(Clock(dut.clk, CLK_PERIOD_NS, units='ns').start())
+        cocotb.fork(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
-        self.source_a = AxiStreamSource(dut, "s_axis_a", dut.clk, byte_size=8)
-        self.source_b = AxiStreamSource(dut, "s_axis_b", dut.clk, byte_size=8)
-        self.sink = AxiStreamSink(dut, "m_axis", dut.clk)        
-        #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.clk)
+        self.source_a = AxiStreamSource(dut, "s_axis_a", dut.aclk, byte_size=8)
+        self.source_b = AxiStreamSource(dut, "s_axis_b", dut.aclk, byte_size=8)
+        self.sink = AxiStreamSink(dut, "m_axis", dut.aclk)        
+        #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
         
     async def cycle_reset(self):
-        self.dut.nrst.setimmediatevalue(1)
-        await RisingEdge(self.dut.clk)
-        await RisingEdge(self.dut.clk)
-        self.dut.nrst <= 0
-        await RisingEdge(self.dut.clk)
-        await RisingEdge(self.dut.clk)
-        self.dut.nrst <= 1
-        await RisingEdge(self.dut.clk)
-        await RisingEdge(self.dut.clk)
+        self.dut.aresetn.setimmediatevalue(1)
+        await RisingEdge(self.dut.aclk)
+        await RisingEdge(self.dut.aclk)
+        self.dut.aresetn <= 0
+        await RisingEdge(self.dut.aclk)
+        await RisingEdge(self.dut.aclk)
+        self.dut.aresetn <= 1
+        await RisingEdge(self.dut.aclk)
+        await RisingEdge(self.dut.aclk)
 
 
 # Test single multiplication
@@ -94,7 +94,7 @@ async def single_multiplication_(dut):
     assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
                            (int.from_bytes(calculated_i,byteorder='little',signed=True),int.from_bytes(received_i,byteorder='little',signed=True)))
     assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
-    await RisingEdge(dut.clk)
+    await RisingEdge(dut.aclk)
     #dut._log.info("0x%08X * 0x%08X" % (A, B))
 
 # Test multiple multiplications
@@ -114,11 +114,11 @@ async def multiple_multiplications_(dut):
         
         test_data = [a_bytes,b_bytes,tb.dut.rounding_cy]
         test_data_list.append(test_data)
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.aclk)
         
     dut.s_axis_a_tvalid <= 0
     dut.s_axis_b_tvalid <= 0
-    await RisingEdge(dut.clk)    
+    await RisingEdge(dut.aclk)    
 
     for test_data in test_data_list:
         rx_frame = await tb.sink.recv()
@@ -134,7 +134,7 @@ async def multiple_multiplications_(dut):
         assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
                             (int.from_bytes(calculated_i,byteorder='little',signed=True),int.from_bytes(received_i,byteorder='little',signed=True)))
         assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.aclk)
         
 # cocotb-test
 

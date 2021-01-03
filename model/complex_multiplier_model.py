@@ -11,6 +11,8 @@ class Model:
     def calculate(self, a, b, rounding_cy=0):
         signFlag = True
         byteOrder = 'little'
+        # endian parameter fir BitArray seems to matter only for bits but not for bytes
+        # so bytes have to be reversed manually here
         a_i = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[0:self.input_width_a//2], signed=signFlag,m=self.input_width_a/2,n=0)
         a_r = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[self.input_width_a//2:], signed=signFlag,m=self.input_width_a/2,n=0)
         b_i = FixedPoint("0b"+BitArray(b[::-1],endian=byteOrder).bin[0:self.input_width_b//2], signed=signFlag,m=self.input_width_b/2,n=0)
