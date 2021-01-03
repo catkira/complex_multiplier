@@ -9,11 +9,12 @@ MODULE      = test_$(DUT)
 VERILOG_SOURCES = $(PWD)/../hdl/$(DUT).v
 
 # module parameters
-export INPUT_WIDTH_A ?= 32
+export INPUT_WIDTH_A ?= 16
 export INPUT_WIDTH_B ?= 16
 export OUTPUT_WIDTH   ?= 32
-export BLOCKING       ?= 0
-export TRUNCATE       ?= 0
+export BLOCKING       ?= 1
+export TRUNCATE       ?= 1
+export STAGES	      ?= 3
 
 
 ifeq ($(SIM), verilator)
@@ -25,6 +26,7 @@ ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GOUTPUT_WIDTH=$(OUTPUT_WIDTH)
 	COMPILE_ARGS += -GBLOCKING=$(BLOCKING)
 	COMPILE_ARGS += -GTRUNCATE=$(TRUNCATE)
+	COMPILE_ARGS += -GSTAGES=$(STAGES)
 endif
 
 

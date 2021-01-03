@@ -37,12 +37,10 @@ class TB(object):
         
         tests_dir = os.path.abspath(os.path.dirname(__file__))
         model_dir = os.path.abspath(os.path.join(tests_dir, '../model/complex_multiplier_model.py'))
-        print(model_dir)
         spec = importlib.util.spec_from_file_location("complex_multiplier_model", model_dir)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
         self.model = foo.Model(self.input_width_a,self.input_width_b,self.output_width,self.truncate) 
-
         
         cocotb.fork(Clock(dut.clk, CLK_PERIOD_NS, units='ns').start())
         
@@ -76,8 +74,6 @@ async def single_multiplication_(dut):
     
     a_bytes = get_bytes(tb.input_width_a//8,random_data())
     b_bytes = get_bytes(tb.input_width_b//8,random_data())
-    #a_bytes = bytes([0x10, 0x01, 0x20, 0x00])
-    #b_bytes = bytes([0x01,0x01])
 
     # send data, ignore tready
     tb.dut.rounding_cy <= 0
@@ -145,31 +141,13 @@ async def multiple_multiplications_(dut):
 tests_dir = os.path.abspath(os.path.dirname(__file__))
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 
-#@pytest.mark.parametrize("input_width_a", [16])
-#@pytest.mark.parametrize("input_width_b", [16])
-#@pytest.mark.parametrize("output_width", [32])
-#@pytest.mark.parametrize("blocking", [1])
-#@pytest.mark.parametrize("truncate", [1])
-#@pytest.mark.parametrize("stages", [3])
-@pytest.mark.parametrize(
-    "parameters", 
-    [
-    {"INPUT_WIDTH_A":"16","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"16","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
-    {"INPUT_WIDTH_A":"16","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"0"},
-    {"INPUT_WIDTH_A":"16","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"0"},
-    {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"0"},
-    {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"0"},
-    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"0"},
-    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"0"},
-    ]
-)
-#def test_complex_multiplier(request, blocking, input_width_a, input_width_b, output_width, truncate, stages):
-def test_complex_multiplier(parameters):
+@pytest.mark.parametrize("input_width_a", [16, 24, 32])
+@pytest.mark.parametrize("input_width_b", [16, 24, 32])
+@pytest.mark.parametrize("output_width", [32, 16])  # TODO: implement support for 24 bit output
+@pytest.mark.parametrize("blocking", [1])
+@pytest.mark.parametrize("truncate", [1, 0])
+@pytest.mark.parametrize("stages", [3, 2])
+def test_complex_multiplier(request, blocking, input_width_a, input_width_b, output_width, truncate, stages):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -178,22 +156,17 @@ def test_complex_multiplier(parameters):
         os.path.join(rtl_dir, f"{dut}.v"),
     ]
 
-    #parameters = {}
+    parameters = {}
 
-    #parameters['INPUT_WIDTH_A'] = input_width_a
-    #parameters['INPUT_WIDTH_B'] = input_width_b
-    #parameters['OUTPUT_WIDTH'] = input_width_a
-    #parameters['BLOCKING'] = blocking
-    #parameters['TRUNCATE'] = truncate
-    #parameters['STAGES'] = stages
+    parameters['INPUT_WIDTH_A'] = input_width_a
+    parameters['INPUT_WIDTH_B'] = input_width_b
+    parameters['OUTPUT_WIDTH'] = output_width
+    parameters['BLOCKING'] = blocking
+    parameters['TRUNCATE'] = truncate
+    parameters['STAGES'] = stages
 
-    #extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
-
+    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
     sim_build="sim_build/" + "_".join(("{}={}".format(*i) for i in parameters.items()))
-
-    #sim_build = os.path.join(tests_dir, "sim_build",
-    #    request.node.name.replace('[', '-').replace(']', ''))
-
     cocotb_test.simulator.run(
         python_search=[tests_dir],
         verilog_sources=verilog_sources,
@@ -201,7 +174,7 @@ def test_complex_multiplier(parameters):
         module=module,
         parameters=parameters,
         sim_build=sim_build,
-        extra_env=parameters,
+        extra_env=extra_env,
     )
 
         
