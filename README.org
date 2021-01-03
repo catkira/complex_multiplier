@@ -12,7 +12,7 @@ If the sum of the input widths is larger than the output width, truncation or ro
 *** Requirements for Tests
 Verilator 1.4
  
-Python 3.8 with modules: fixedpoint, cocotb, cocotb-test, bitstring, pytest
+Python 3.8 with modules: fixedpoint, cocotb, cocotb-test, bitstring, pytest, pytest-cov, cocotbext.axi
 
 *** Running the tests
 To run the cocotb-test based tests go into the folder of this repository and type "SIM=verilator pytest -v"
