@@ -79,6 +79,7 @@ async def single_multiplication_(dut):
     b_bytes = get_bytes(int(tb.input_width_b/8),random_data())
 
     # send data, ignore tready
+    tb.dut.rounding_cy <= 0
     await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
     await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
         
@@ -87,7 +88,7 @@ async def single_multiplication_(dut):
     received_r = receivedData[int(len(receivedData)/2):len(receivedData)]
     received_i = receivedData[0:int(len(receivedData)/2)]
 
-    calculatedData = tb.model.calculate(a_bytes,b_bytes)
+    calculatedData = tb.model.calculate(a_bytes,b_bytes,0)
     calculated_i = calculatedData[0:int(tb.output_width/8/2)]
     calculated_r = calculatedData[int(tb.output_width/8/2):int(tb.output_width/8)]
     assert received_r == calculated_r, ("real part should have been %i but was %i " % 
@@ -104,6 +105,7 @@ async def multiple_multiplications_(dut):
     tb = TB(dut)    
     await tb.cycle_reset()
     #tb.sink.queue = deque() # remove remaining items from last test    
+    tb.dut.rounding_cy <= 0
     test_data_list = []
     for i in range(20):
         a_bytes = get_bytes(int(tb.input_width_a/8),random_data())
@@ -126,7 +128,7 @@ async def multiple_multiplications_(dut):
         received_r = receivedData[int(len(receivedData)/2):len(receivedData)]
         received_i = receivedData[0:int(len(receivedData)/2)]
 
-        calculatedData = tb.model.calculate(test_data[0],test_data[1])
+        calculatedData = tb.model.calculate(test_data[0],test_data[1],0)
         calculated_i = calculatedData[0:int(tb.output_width/8/2)]
         calculated_r = calculatedData[int(tb.output_width/8/2):int(tb.output_width/8)]
         assert received_r == calculated_r, ("real part should have been %i but was %i " % 

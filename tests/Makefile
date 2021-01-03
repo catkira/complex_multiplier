@@ -13,7 +13,7 @@ export INPUT_WIDTH_A ?= 24
 export INPUT_WIDTH_B ?= 16
 export OUTPUT_WIDTH   ?= 32
 export BLOCKING       ?= 0
-export TRUNCATE       ?= 1
+export TRUNCATE       ?= 0
 
 
 ifeq ($(SIM), verilator)

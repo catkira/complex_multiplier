@@ -28,14 +28,13 @@ class Model:
         else: 
         # truncation with bias correction
             biasCorrectionString = "0b0"
-            for i in range(truncate_bits-2):
+            for i in range(truncate_bits-1):
                 biasCorrectionString += "1"
             if (rounding_cy == 1):
                 biasCorrectionString += "1"
             else:
                 biasCorrectionString += "0"
-            biasCorrectionNumber = FixedPoint(biasCorrectionString, signed=False,m=truncate_bits,n=0)
-            print(biasCorrectionNumber)
+            biasCorrectionNumber = FixedPoint(biasCorrectionString, signed=False,m=truncate_bits+1,n=0)
             r_r = (r_r + biasCorrectionNumber) >> truncate_bits
             r_i = (r_i + biasCorrectionNumber) >> truncate_bits
         
