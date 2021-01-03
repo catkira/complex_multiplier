@@ -153,6 +153,8 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
     {"INPUT_WIDTH_A":"16","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
     {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"1"},
     {"INPUT_WIDTH_A":"24","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
+    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"1","TRUNCATE":"1"},
+    {"INPUT_WIDTH_A":"32","INPUT_WIDTH_B":"16","OUTPUT_WIDTH":"32","BLOCKING":"0","TRUNCATE":"1"},
     ]
 )
 #def test_complex_multiplier(request, blocking, input_width_a, input_width_b, output_width, truncate, stages):

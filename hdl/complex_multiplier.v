@@ -32,8 +32,7 @@ module complex_multiplier
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
     // stage2: calculate p_r and p_i
 
-    reg signed [OUTPUT_WIDTH/2-1:0] ar_br, ai_bi, ar_bi, ai_br;
-    reg        [STAGES:0]                    tvalid  ;
+    reg        [STAGES:0]                      tvalid;
     reg        [OUTPUT_WIDTH-1:0]              tdata [STAGES-2:0];
 
     wire signed [INPUT_WIDTH_A/2-1:0] a_r;
@@ -47,18 +46,31 @@ module complex_multiplier
     
     localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
 
+    // intermediate products are calculated with full precision, this can be optimized in the case of truncation
+    // the synthesizer hopefully does this optimization
+    reg signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] ar_br, ai_bi, ar_bi, ai_br;
+
+    wire signed [OUTPUT_WIDTH/2-1:0] result_r;
+    wire signed [OUTPUT_WIDTH/2-1:0] result_i;
+    wire signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] temp1,temp2;
+    assign temp1 = (ar_br - ai_bi)>>>TRUNC_BITS;
+    assign temp2 = (ar_bi + ai_br)>>>TRUNC_BITS;  
+    assign result_r = temp1[OUTPUT_WIDTH/2-1:0];
+    assign result_i = temp2[OUTPUT_WIDTH/2-1:0];    
+
+
     integer i;
     always @(posedge clk) begin
         if (nrst == 0) begin
             m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
             m_axis_tvalid <= 0;
-            tvalid <= {{(STAGES){1'b0}}};
+            tvalid <= {{(STAGES+1){1'b0}}};
             for (i=0;i<(STAGES-1);i=i+1)
                 tdata[i] <= {OUTPUT_WIDTH{1'b0}};
-            ai_bi <= {(OUTPUT_WIDTH/2){1'b0}};
-            ai_br <= {(OUTPUT_WIDTH/2){1'b0}};
-            ar_bi <= {(OUTPUT_WIDTH/2){1'b0}};
-            ar_br <= {(OUTPUT_WIDTH/2){1'b0}};
+            ai_bi <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
+            ai_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
+            ar_bi <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
+            ar_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
         end
         else begin
             // wait for receiver to be ready if BLOCKING is enabled
@@ -72,24 +84,10 @@ module complex_multiplier
             else begin
                 s_axis_a_tready <= 1;
                 s_axis_b_tready <= 1;
-                if (TRUNC_BITS == 0) begin
-                // no rounding or truncation needed
-                    ar_br <= a_r * b_r;
-                    ai_bi <= a_i * b_i;
-                    ar_bi <= a_r * b_i;
-                    ai_br <= a_i * b_r;
-                end
-                else begin
-                    if (TRUNCATE == 1) begin
-                        ar_br <= ((a_r * b_r)>>TRUNC_BITS);
-                        ai_bi <= ((a_i * b_i)>>TRUNC_BITS);
-                        ar_bi <= ((a_r * b_i)>>TRUNC_BITS);
-                        ai_br <= ((a_i * b_r)>>TRUNC_BITS);                 
-                    end
-                    else begin
-                    // TODO: implement rounding
-                    end
-                end
+                ar_br <= a_r * b_r;
+                ai_bi <= a_i * b_i;
+                ar_bi <= a_r * b_i;
+                ai_br <= a_i * b_r;
                 
                 // propagate valid bit through pipeline
                 // if BLOCKING is enabled the inputs are only sampled when both inputs are valid at the same time
@@ -110,14 +108,14 @@ module complex_multiplier
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
                 if (STAGES > 2) begin
-                    tdata[0] <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                    tdata[0] <= {result_i,result_r};
                     for (i = 1; i<(STAGES-2); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
                     m_axis_tdata <= tdata[STAGES-3];
                 end
                 else begin
-                    m_axis_tdata <= {{ar_bi + ai_br},{ar_br - ai_bi}};
+                    m_axis_tdata <= {result_i,result_r};
                 end
             end
         end
