@@ -1,6 +1,6 @@
 PWD     =  $(shell pwd)
 SIM     =  verilator
-VERILATOR_TRACE = 0
+VERILATOR_TRACE = 1
 
 DUT         = complex_multiplier
 TOPLEVEL    = $(DUT)

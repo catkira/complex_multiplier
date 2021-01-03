@@ -24,6 +24,6 @@ class Model:
         i_bytes = r_i.to_bytes(byteorder='big',length=int(self.output_width/8/2),signed=signFlag)
         result = bytearray(i_bytes)
         result += r_bytes
-        print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
-        #print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
+        # print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
+        # print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
         return result
