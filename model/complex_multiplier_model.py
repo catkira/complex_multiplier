@@ -21,8 +21,14 @@ class Model:
         # its important to do truncation after the + and - operation, 
         # if truncation is done before that, the result is slightly different!
         truncate_bits = self.input_width_a + self.input_width_b - self.output_width
-        r_r = r_r >> truncate_bits
-        r_i = r_i >> truncate_bits
+        if True:
+            r_r = r_r >> truncate_bits
+            r_i = r_i >> truncate_bits
+        else: 
+        # truncation with bias correction
+            r_r = (r_r + 2**(truncate_bits-1)) >> truncate_bits
+            r_i = (r_i + 2**(truncate_bits-1)) >> truncate_bits
+        
         
         r_r = int(FixedPoint(r_r,m=int(self.output_width/2),signed=signFlag,overflow_alert='ignore',overflow='wrap'))
         r_i = int(FixedPoint(r_i,m=int(self.output_width/2),signed=signFlag,overflow_alert='ignore'))
