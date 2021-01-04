@@ -49,8 +49,8 @@ class Model:
         
         r_r = int(FixedPoint(r_r,m=self.output_width//2,signed=signFlag,overflow_alert='ignore',overflow='wrap'))
         r_i = int(FixedPoint(r_i,m=self.output_width//2,signed=signFlag,overflow_alert='ignore'))
-        r_bytes = r_r.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
-        i_bytes = r_i.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
+        r_bytes = r_r.to_bytes(byteorder=byteOrder,length=(self.output_width+15)//8//2,signed=signFlag)
+        i_bytes = r_i.to_bytes(byteorder=byteOrder,length=(self.output_width+15)//8//2,signed=signFlag)
         result = bytearray(i_bytes)
         result += r_bytes
         # print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))

@@ -25,7 +25,7 @@ module complex_multiplier
         output reg                            s_axis_b_tready,
         input wire                            s_axis_b_tvalid,
         // master output
-        output reg signed		  [OUTPUT_WIDTH-1:0] m_axis_tdata,
+        output reg signed		  [((OUTPUT_WIDTH+15)/16)*16-1:0] m_axis_tdata,
         output reg                          m_axis_tvalid,
         input wire                           m_axis_tready
         );
@@ -50,6 +50,7 @@ module complex_multiplier
     assign b_r = s_axis_b_tdata[INPUT_WIDTH_B/2-1:0];
     
     localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
+    localparam OUTPUT_PADDING = ((OUTPUT_WIDTH+15)/16)*16 - OUTPUT_WIDTH;
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
@@ -121,14 +122,15 @@ module complex_multiplier
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
                 if (STAGES > 2) begin
-                    tdata[0] <= {result_i,result_r};
+                    tdata[0] <= {{(OUTPUT_PADDING){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
+                        {(OUTPUT_PADDING){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
                     for (i = 1; i<(STAGES-2); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
                     m_axis_tdata <= tdata[STAGES-3];
                 end
                 else begin
-                    m_axis_tdata <= {result_i,result_r};
+                    // m_axis_tdata <= {result_i,result_r};
                 end
             end
         end

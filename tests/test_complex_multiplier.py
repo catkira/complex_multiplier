@@ -32,9 +32,9 @@ class TB(object):
         self.stages = int(dut.STAGES.value)
         self.truncate = int(dut.TRUNCATE.value)
 
-        self.axis_input_width_a = (self.input_width_a+15)//16
-        self.axis_input_width_b = (self.input_width_b+15)//16
-        self.axis_output_width  = (self.output_width+15)//16
+        self.axis_input_width_a = ((self.input_width_a+15)//16)*16
+        self.axis_input_width_b = ((self.input_width_b+15)//16)*16
+        self.axis_output_width  = ((self.output_width+15)//16)*16
 
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)        
@@ -54,13 +54,13 @@ class TB(object):
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
-        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='big', length=self.output_width//8)
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='big', length=self.axis_output_width//8)
         received_r = receivedData[len(receivedData)//2:len(receivedData)]
         received_i = receivedData[0:len(receivedData)//2]
         return [received_i, received_r]
 
     def frameToBytes(self, rx_frame):
-        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.output_width//8)
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.axis_output_width//8)
         return receivedData[::-1]
 
     def getRandomIQSample(self, width):
@@ -111,8 +111,8 @@ async def single_multiplication_(dut):
     [received_i, received_r] = tb.frameToIQ(rx_frame)
 
     calculatedData = tb.model.calculate(a_bytes,b_bytes,tb.dut.rounding_cy)
-    calculated_i = calculatedData[0:tb.output_width//8//2]
-    calculated_r = calculatedData[tb.output_width//8//2:tb.output_width//8]
+    calculated_i = calculatedData[0:tb.axis_output_width//8//2]
+    calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
     assert received_r == calculated_r, ("real part should have been %i but was %i " % 
                            (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),
                            int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
@@ -149,8 +149,8 @@ async def multiple_multiplications_(dut):
         [received_i, received_r] = tb.frameToIQ(rx_frame)
 
         calculatedData = tb.model.calculate(test_data[0],test_data[1],test_data[2])
-        calculated_i = calculatedData[0:tb.output_width//8//2]
-        calculated_r = calculatedData[tb.output_width//8//2:tb.output_width//8]
+        calculated_i = calculatedData[0:tb.axis_output_width//8//2]
+        calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
         assert received_r == calculated_r, ("real part should have been %i but was %i " % 
                             (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
         assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
