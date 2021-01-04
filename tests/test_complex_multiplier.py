@@ -54,10 +54,10 @@ class TB(object):
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
-        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.output_width//8)
-        received_i = receivedData[len(receivedData)//2:len(receivedData)]
-        received_r = receivedData[0:len(receivedData)//2]
-        return [received_i[::-1], received_r[::-1]]
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='big', length=self.output_width//8)
+        received_r = receivedData[len(receivedData)//2:len(receivedData)]
+        received_i = receivedData[0:len(receivedData)//2]
+        return [received_i, received_r]
 
     def frameToBytes(self, rx_frame):
         receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.output_width//8)
