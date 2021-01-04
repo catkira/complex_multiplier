@@ -66,11 +66,11 @@ class TB(object):
     def getRandomIQSample(self, width):
         real = random.randint(-2**(width//2-1)-1, 2**(width//2-1))
         imag = random.randint(-2**(width//2-1)-1, 2**(width//2-1))
-        real_fp = FixedPoint(real, signed=True,m=width//2,n=0)
-        imag_fp = FixedPoint(imag, signed=True,m=width//2,n=0)
+        # real_fp = FixedPoint(real, signed=True,m=width//2,n=0)
+        # imag_fp = FixedPoint(imag, signed=True,m=width//2,n=0)
         axis_width = ((width+15)//16)*16
-        real_bytes = int(real_fp).to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
-        imag_bytes = int(imag_fp).to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
+        real_bytes = real.to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
+        imag_bytes = imag.to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
         sample = real_bytes
         sample += imag_bytes
         return sample
