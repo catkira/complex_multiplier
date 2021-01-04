@@ -31,7 +31,11 @@ class TB(object):
         self.output_width = int(dut.OUTPUT_WIDTH.value)
         self.stages = int(dut.STAGES.value)
         self.truncate = int(dut.TRUNCATE.value)
-        
+
+        self.axis_input_width_a = (self.input_width_a+15)//16
+        self.axis_input_width_b = (self.input_width_b+15)//16
+        self.axis_output_width  = (self.output_width+15)//16
+
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)        
         
@@ -48,6 +52,28 @@ class TB(object):
         self.source_b = AxiStreamSource(dut, "s_axis_b", dut.aclk, byte_size=8)
         self.sink = AxiStreamSink(dut, "m_axis", dut.aclk)        
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
+
+    def frameToIQ(self, rx_frame):
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.output_width//8)
+        received_i = receivedData[len(receivedData)//2:len(receivedData)]
+        received_r = receivedData[0:len(receivedData)//2]
+        return [received_i[::-1], received_r[::-1]]
+
+    def frameToBytes(self, rx_frame):
+        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=self.output_width//8)
+        return receivedData[::-1]
+
+    def getRandomIQSample(self, width):
+        real = random.randint(-2**(width//2-1)-1, 2**(width//2-1))
+        imag = random.randint(-2**(width//2-1)-1, 2**(width//2-1))
+        real_fp = FixedPoint(real, signed=True,m=width//2,n=0)
+        imag_fp = FixedPoint(imag, signed=True,m=width//2,n=0)
+        axis_width = ((width+15)//16)*16
+        real_bytes = int(real_fp).to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
+        imag_bytes = int(imag_fp).to_bytes(length=axis_width//8//2, byteorder='big', signed=True)
+        sample = real_bytes
+        sample += imag_bytes
+        return sample
         
     async def cycle_reset(self):
         self.dut.aresetn.setimmediatevalue(1)
@@ -72,30 +98,28 @@ async def single_multiplication_(dut):
     tb = TB(dut)
     await tb.cycle_reset()
     
-    a_bytes = get_bytes(tb.input_width_a//8,random_data())
-    b_bytes = get_bytes(tb.input_width_b//8,random_data())
+    a_bytes = tb.getRandomIQSample(tb.input_width_a)
+    b_bytes = tb.getRandomIQSample(tb.input_width_b)
 
     # send data, ignore tready
     tb.dut.rounding_cy <= 0
-    await tb.source_a.send(AxiStreamFrame(a_bytes))
-    await tb.source_b.send(AxiStreamFrame(b_bytes))
+    await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
+    await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
         
     rx_frame = await tb.sink.recv()
-    receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=tb.output_width//8)
-    received_r = receivedData[len(receivedData)//2:len(receivedData)]
-    received_i = receivedData[0:len(receivedData)//2]
+    byteOrder = 'big'
+    [received_i, received_r] = tb.frameToIQ(rx_frame)
 
     calculatedData = tb.model.calculate(a_bytes,b_bytes,tb.dut.rounding_cy)
     calculated_i = calculatedData[0:tb.output_width//8//2]
     calculated_r = calculatedData[tb.output_width//8//2:tb.output_width//8]
     assert received_r == calculated_r, ("real part should have been %i but was %i " % 
-                           (int.from_bytes(calculated_r,byteorder='little',signed=True),
-                           int.from_bytes(received_r,byteorder='little',signed=True)))
-    assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
-                           (int.from_bytes(calculated_i,byteorder='little',signed=True),int.from_bytes(received_i,byteorder='little',signed=True)))
-    assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
+                           (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),
+                           int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
+    assert received_i== calculated_i, ("imaginary part should have been %i but was %i " % 
+                           (int.from_bytes(calculated_i,byteorder=byteOrder,signed=True),int.from_bytes(received_i,byteorder=byteOrder,signed=True)))
+    assert calculatedData == tb.frameToBytes(rx_frame), ("Error, expected %s got %s" % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
     await RisingEdge(dut.aclk)
-    #dut._log.info("0x%08X * 0x%08X" % (A, B))
 
 # Test multiple multiplications
 @cocotb.test()
@@ -105,12 +129,12 @@ async def multiple_multiplications_(dut):
     #tb.sink.queue = deque() # remove remaining items from last test    
     test_data_list = []
     for i in range(20):
-        a_bytes = get_bytes(tb.input_width_a//8,random_data())
-        b_bytes = get_bytes(tb.input_width_b//8,random_data())
+        a_bytes = tb.getRandomIQSample(tb.input_width_a)
+        b_bytes = tb.getRandomIQSample(tb.input_width_b)
         
         tb.dut.rounding_cy <= 0
-        await tb.source_a.send(AxiStreamFrame(a_bytes))
-        await tb.source_b.send(AxiStreamFrame(b_bytes))
+        await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
+        await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
         
         test_data = [a_bytes,b_bytes,tb.dut.rounding_cy]
         test_data_list.append(test_data)
@@ -119,21 +143,19 @@ async def multiple_multiplications_(dut):
     dut.s_axis_a_tvalid <= 0
     dut.s_axis_b_tvalid <= 0
     await RisingEdge(dut.aclk)    
-
+    byteOrder = 'big'
     for test_data in test_data_list:
         rx_frame = await tb.sink.recv()
-        receivedData = (rx_frame.tdata[0]).to_bytes(byteorder='little', length=int(tb.output_width/8), signed=False)
-        received_r = receivedData[len(receivedData)//2:len(receivedData)]
-        received_i = receivedData[0:len(receivedData)//2]
+        [received_i, received_r] = tb.frameToIQ(rx_frame)
 
         calculatedData = tb.model.calculate(test_data[0],test_data[1],test_data[2])
         calculated_i = calculatedData[0:tb.output_width//8//2]
         calculated_r = calculatedData[tb.output_width//8//2:tb.output_width//8]
         assert received_r == calculated_r, ("real part should have been %i but was %i " % 
-                            (int.from_bytes(calculated_r,byteorder='little',signed=True),int.from_bytes(received_r,byteorder='little',signed=True)))
+                            (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
         assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
-                            (int.from_bytes(calculated_i,byteorder='little',signed=True),int.from_bytes(received_i,byteorder='little',signed=True)))
-        assert calculatedData == receivedData, ("Error, expected %s got %s" % (calculatedData.hex(), receivedData.hex()))
+                            (int.from_bytes(calculated_i,byteorder=byteOrder,signed=True),int.from_bytes(received_i,byteorder=byteOrder,signed=True)))
+        assert calculatedData == tb.frameToBytes(rx_frame), ("Error, expected %s got %s" % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
         await RisingEdge(dut.aclk)
         
 # cocotb-test

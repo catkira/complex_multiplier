@@ -8,15 +8,21 @@ class Model:
         self.output_width = output_width
         self.truncate = truncate
 
+        self.axis_input_width_a = ((self.input_width_a+15)//16)*16
+        self.axis_input_width_b = ((self.input_width_b+15)//16)*16
+        self.axis_output_width  = ((self.output_width+15)//16)*16        
+
     def calculate(self, a, b, rounding_cy=0):
         signFlag = True
-        byteOrder = 'little'
+        byteOrder = 'big'
+        bitOrder = 'big'
         # endian parameter fir BitArray seems to matter only for bits but not for bytes
         # so bytes have to be reversed manually here
-        a_i = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[0:self.input_width_a//2], signed=signFlag,m=self.input_width_a/2,n=0)
-        a_r = FixedPoint("0b"+BitArray(a[::-1],endian=byteOrder).bin[self.input_width_a//2:], signed=signFlag,m=self.input_width_a/2,n=0)
-        b_i = FixedPoint("0b"+BitArray(b[::-1],endian=byteOrder).bin[0:self.input_width_b//2], signed=signFlag,m=self.input_width_b/2,n=0)
-        b_r = FixedPoint("0b"+BitArray(b[::-1],endian=byteOrder).bin[self.input_width_b//2:], signed=signFlag,m=self.input_width_b/2,n=0)
+        # use FixPoint to select the used bits
+        a_i = FixedPoint(int.from_bytes(a[0:self.axis_input_width_a//2//8],byteorder='big', signed=signFlag), signed=signFlag,m=self.input_width_a//2,n=0)
+        a_r = FixedPoint(int.from_bytes(a[self.axis_input_width_a//2//8:],byteorder='big', signed=signFlag), signed=signFlag,m=self.input_width_a//2,n=0)
+        b_i = FixedPoint(int.from_bytes(b[0:self.axis_input_width_b//2//8],byteorder='big', signed=signFlag), signed=signFlag,m=self.input_width_b//2,n=0)
+        b_r = FixedPoint(int.from_bytes(b[self.axis_input_width_b//2//8:],byteorder='big', signed=signFlag), signed=signFlag,m=self.axis_input_width_b//2,n=0)
         r_r = int(a_r*b_r) - int(a_i*b_i)
         r_i = int(a_r*b_i) + int(a_i*b_r)
         
@@ -45,8 +51,8 @@ class Model:
         r_i = int(FixedPoint(r_i,m=self.output_width//2,signed=signFlag,overflow_alert='ignore'))
         r_bytes = r_r.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
         i_bytes = r_i.to_bytes(byteorder=byteOrder,length=self.output_width//8//2,signed=signFlag)
-        result = bytearray(r_bytes)
-        result += i_bytes
-        #print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
-        #print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
+        result = bytearray(i_bytes)
+        result += r_bytes
+        # print("(%i + j%i) * (%i + j%i) = (%i + j%i)"%(a_r,a_i,b_r,b_i,r_r,r_i))
+        # print("(%s) * (%s) = %s"%(a.hex(),b.hex(),result.hex()))
         return result

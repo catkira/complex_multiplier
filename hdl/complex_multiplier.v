@@ -7,8 +7,8 @@
 `endif
 
 module complex_multiplier
-    #(parameter INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 8
-      parameter INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 8
+    #(parameter INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 2
+      parameter INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 2
       parameter OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
       parameter STAGES `VL_RD = 3,  // minimum value is 2
       parameter BLOCKING `VL_RD = 1,
@@ -17,11 +17,11 @@ module complex_multiplier
         input wire              aclk, aresetn,
 		inout wire				rounding_cy,
         // slave a
-        input signed            [INPUT_WIDTH_A-1:0] s_axis_a_tdata,
+        input signed            [((INPUT_WIDTH_A+15)/16)*16-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
         input wire                            s_axis_a_tvalid,
         // slave b
-        input signed            [INPUT_WIDTH_B-1:0] s_axis_b_tdata,
+        input signed            [((INPUT_WIDTH_B+15)/16)*16-1:0] s_axis_b_tdata,
         output reg                            s_axis_b_tready,
         input wire                            s_axis_b_tvalid,
         // master output
@@ -40,9 +40,13 @@ module complex_multiplier
     wire signed [INPUT_WIDTH_A/2-1:0] a_i;
     wire signed [INPUT_WIDTH_B/2-1:0] b_r;
     wire signed [INPUT_WIDTH_B/2-1:0] b_i;
-    assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
+    localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
+    localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
+    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A/2 + INPUT_WIDTH_A/2 - 1:AXIS_INPUT_WIDTH_A/2];
+    // assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
     assign a_r = s_axis_a_tdata[INPUT_WIDTH_A/2-1:0];
-    assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
+    // assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
+    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B/2 + INPUT_WIDTH_B/2 - 1:AXIS_INPUT_WIDTH_B/2];
     assign b_r = s_axis_b_tdata[INPUT_WIDTH_B/2-1:0];
     
     localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
