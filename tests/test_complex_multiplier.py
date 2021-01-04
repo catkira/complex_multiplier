@@ -164,8 +164,8 @@ tests_dir = os.path.abspath(os.path.dirname(__file__))
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 
 @pytest.mark.parametrize("input_width_a", [16, 24, 32])
-@pytest.mark.parametrize("input_width_b", [16, 24, 32])
-@pytest.mark.parametrize("output_width", [32, 16])  # TODO: implement support for 24 bit output
+@pytest.mark.parametrize("input_width_b", [16, 32])
+@pytest.mark.parametrize("output_width", [32, 24, 16])  # TODO: implement support for 24 bit output
 @pytest.mark.parametrize("blocking", [1])
 @pytest.mark.parametrize("truncate", [1, 0])
 @pytest.mark.parametrize("stages", [3, 2])

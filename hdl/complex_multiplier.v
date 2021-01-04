@@ -32,16 +32,19 @@ module complex_multiplier
     // p = a*b = p_r + jp_i = (a_r*b_r - a_i*b_i) + j(a_r*b_i + a_i*b_r)
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
     // stage2: calculate p_r and p_i
+    localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
+    localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;
+    localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
+    localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
+    localparam OUTPUT_PADDING = AXIS_OUTPUT_WIDTH - OUTPUT_WIDTH;
 
     reg        [STAGES:0]                      tvalid;
-    reg        [OUTPUT_WIDTH-1:0]              tdata [STAGES-2:0];
+    reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
 
     wire signed [INPUT_WIDTH_A/2-1:0] a_r;
     wire signed [INPUT_WIDTH_A/2-1:0] a_i;
     wire signed [INPUT_WIDTH_B/2-1:0] b_r;
     wire signed [INPUT_WIDTH_B/2-1:0] b_i;
-    localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
-    localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
     assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A/2 + INPUT_WIDTH_A/2 - 1:AXIS_INPUT_WIDTH_A/2];
     // assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
     assign a_r = s_axis_a_tdata[INPUT_WIDTH_A/2-1:0];
@@ -49,8 +52,6 @@ module complex_multiplier
     assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B/2 + INPUT_WIDTH_B/2 - 1:AXIS_INPUT_WIDTH_B/2];
     assign b_r = s_axis_b_tdata[INPUT_WIDTH_B/2-1:0];
     
-    localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
-    localparam OUTPUT_PADDING = ((OUTPUT_WIDTH+15)/16)*16 - OUTPUT_WIDTH;
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
@@ -122,15 +123,16 @@ module complex_multiplier
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
                 if (STAGES > 2) begin
-                    tdata[0] <= {{(OUTPUT_PADDING){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
-                        {(OUTPUT_PADDING){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
+                    tdata[0] <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
+                        {(OUTPUT_PADDING/2){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
                     for (i = 1; i<(STAGES-2); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
                     m_axis_tdata <= tdata[STAGES-3];
                 end
                 else begin
-                    // m_axis_tdata <= {result_i,result_r};
+                    m_axis_tdata <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
+                        {(OUTPUT_PADDING/2){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
                 end
             end
         end
