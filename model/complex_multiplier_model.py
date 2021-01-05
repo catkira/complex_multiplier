@@ -46,7 +46,6 @@ class Model:
             r_r = (r_r + biasCorrectionNumber) >> truncate_bits
             r_i = (r_i + biasCorrectionNumber) >> truncate_bits
         
-        print("!!(%i + j%i)" %(r_r,r_i))
         r_r = int(FixedPoint(r_r,m=self.output_width//2,signed=signFlag,overflow_alert='ignore',overflow='wrap'))
         r_i = int(FixedPoint(r_i,m=self.output_width//2,signed=signFlag,overflow_alert='ignore'))
         r_bytes = r_r.to_bytes(byteorder=byteOrder,length=self.axis_output_width//8//2,signed=signFlag)

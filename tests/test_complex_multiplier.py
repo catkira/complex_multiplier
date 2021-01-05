@@ -26,9 +26,9 @@ class TB(object):
     def __init__(self,dut):
         random.seed(30) # reproducible tests
         self.dut = dut
-        self.input_width_a = int(dut.INPUT_WIDTH_A.value)
-        self.input_width_b = int(dut.INPUT_WIDTH_B.value)
-        self.output_width = int(dut.OUTPUT_WIDTH.value)
+        self.input_width_a = int(dut.OPERAND_WIDTH_A.value)*2
+        self.input_width_b = int(dut.OPERAND_WIDTH_B.value)*2
+        self.output_width = int(dut.OPERAND_WIDTH_OUT.value)*2
         self.stages = int(dut.STAGES.value)
         self.truncate = int(dut.TRUNCATE.value)
 
@@ -163,13 +163,13 @@ async def multiple_multiplications_(dut):
 tests_dir = os.path.abspath(os.path.dirname(__file__))
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 
-@pytest.mark.parametrize("input_width_a", [16, 20, 32])
-@pytest.mark.parametrize("input_width_b", [16, 32])
-@pytest.mark.parametrize("output_width", [32, 22, 16])  # TODO: implement support for 24 bit output
+@pytest.mark.parametrize("operand_width_a", [16, 20, 32])
+@pytest.mark.parametrize("operand_width_b", [16, 32])
+@pytest.mark.parametrize("operand_width_out", [32, 22, 16])  # TODO: implement support for 24 bit output
 @pytest.mark.parametrize("blocking", [1])
 @pytest.mark.parametrize("truncate", [1, 0])
 @pytest.mark.parametrize("stages", [3, 2])
-def test_complex_multiplier(request, blocking, input_width_a, input_width_b, output_width, truncate, stages):
+def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, truncate, stages):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -180,9 +180,9 @@ def test_complex_multiplier(request, blocking, input_width_a, input_width_b, out
 
     parameters = {}
 
-    parameters['INPUT_WIDTH_A'] = input_width_a
-    parameters['INPUT_WIDTH_B'] = input_width_b
-    parameters['OUTPUT_WIDTH'] = output_width
+    parameters['OPERAND_WIDTH_A'] = operand_width_a
+    parameters['OPERAND_WIDTH_B'] = operand_width_b
+    parameters['OPERAND_WIDTH_OUT'] = operand_width_out
     parameters['BLOCKING'] = blocking
     parameters['TRUNCATE'] = truncate
     parameters['STAGES'] = stages
