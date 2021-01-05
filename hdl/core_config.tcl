@@ -12,17 +12,17 @@ core_parameter TRUNCATE      {TRUNCATE} {Select between truncation and rounding}
 core_parameter STAGES        {STAGES} {Number of pipeline stages (min=2)}
 
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_a]
-set_property NAME s_axis_a $bus
+set_property NAME S_AXIS_A $bus
 set_property INTERFACE_MODE slave $bus
 
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_b]
-set_property NAME s_axis_b $bus
+set_property NAME S_AXIS_B $bus
 set_property INTERFACE_MODE slave $bus
 
-set bus [ipx::get_bus_interfaces -of_objects $core m_axis]
-set_property NAME m_axis $bus
+set bus [ipx::get_bus_interfaces -of_objects $core m_axis_dout]
+set_property NAME M_AXIS_DOUT $bus
 set_property INTERFACE_MODE master $bus
 
 set bus [ipx::get_bus_interfaces aclk]
 set parameter [ipx::get_bus_parameters -of_objects $bus ASSOCIATED_BUSIF]
-set_property VALUE s_axis_a:s_axis_b:m_axis $parameter
+set_property VALUE S_AXIS_A:S_AXIS_B:M_AXIS_DOUT $parameter

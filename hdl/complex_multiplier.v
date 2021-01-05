@@ -25,9 +25,9 @@ module complex_multiplier
         output reg                            s_axis_b_tready,
         input                                 s_axis_b_tvalid,
         // master output
-        output reg  		  [((OPERAND_WIDTH_OUT*2+15)/16)*16-1:0] m_axis_tdata,
-        output reg                          m_axis_tvalid,
-        input                              m_axis_tready
+        output reg  		  [((OPERAND_WIDTH_OUT*2+15)/16)*16-1:0] m_axis_dout_tdata,
+        output reg                          m_axis_dout_tvalid,
+        input                              m_axis_dout_tready
         );
     // p = a*b = p_r + jp_i = (a_r*b_r - a_i*b_i) + j(a_r*b_i + a_i*b_r)
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
@@ -80,8 +80,8 @@ module complex_multiplier
     integer i;
     always @(posedge aclk) begin
         if (aresetn == 0) begin
-            m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
-            m_axis_tvalid <= 0;
+            m_axis_dout_tdata <= {(OUTPUT_WIDTH){1'b0}};
+            m_axis_dout_tvalid <= 0;
             tvalid <= {{(STAGES+1){1'b0}}};
             for (i=0;i<(STAGES-1);i=i+1)
                 tdata[i] <= {OUTPUT_WIDTH{1'b0}};
@@ -92,9 +92,9 @@ module complex_multiplier
         end
         else begin
             // wait for receiver to be ready if BLOCKING is enabled
-            if (BLOCKING == 1 && m_axis_tready == 0 && m_axis_tvalid == 1) begin 
-                m_axis_tvalid <= 0;
-                m_axis_tdata <= {(OUTPUT_WIDTH){1'b0}};
+            if (BLOCKING == 1 && m_axis_dout_tready == 0 && m_axis_dout_tvalid == 1) begin 
+                m_axis_dout_tvalid <= 0;
+                m_axis_dout_tdata <= {(OUTPUT_WIDTH){1'b0}};
                 // apply back pressure
                 s_axis_a_tready <= 0;
                 s_axis_b_tready <= 0;
@@ -122,7 +122,7 @@ module complex_multiplier
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
                 end
-                m_axis_tvalid <= tvalid[STAGES-2];
+                m_axis_dout_tvalid <= tvalid[STAGES-2];
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
                 if (STAGES > 2) begin
@@ -131,10 +131,10 @@ module complex_multiplier
                     for (i = 1; i<(STAGES-2); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
-                    m_axis_tdata <= tdata[STAGES-3];
+                    m_axis_dout_tdata <= tdata[STAGES-3];
                 end
                 else begin
-                    m_axis_tdata <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
+                    m_axis_dout_tdata <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
                         {(OUTPUT_PADDING/2){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
                 end
             end

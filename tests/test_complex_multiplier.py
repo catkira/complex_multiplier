@@ -50,7 +50,7 @@ class TB(object):
         
         self.source_a = AxiStreamSource(dut, "s_axis_a", dut.aclk, byte_size=8)
         self.source_b = AxiStreamSource(dut, "s_axis_b", dut.aclk, byte_size=8)
-        self.sink = AxiStreamSink(dut, "m_axis", dut.aclk)        
+        self.sink = AxiStreamSink(dut, "m_axis_dout", dut.aclk)        
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
