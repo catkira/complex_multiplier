@@ -5,11 +5,11 @@ set core [ipx::current_core]
 set_property DISPLAY_NAME $display_name $core
 set_property DESCRIPTION $display_name $core
 
-core_parameter INPUT_WIDTH_A {AXI DATA WIDTH} {Width of the AXIS data-in-a bus}
-core_parameter INPUT_WIDTH_B {AXI ADDR WIDTH} {Width of the AXIS data-in-b bus}
-core_parameter OUTPUT_WIDTH  {AXI ADDR WIDTH} {Width of the AXIS data-out bus}
-core_parameter TRUNCATE      {BIT} {Select between truncation and rounding}
-core_parameter STAGES        {INT} {Number of pipeline stages (min=2)}
+core_parameter INPUT_WIDTH_A {INPUT WIDTH A} {Width of the AXIS data-in-a bus}
+core_parameter INPUT_WIDTH_B {INPUT WIDTH B} {Width of the AXIS data-in-b bus}
+core_parameter OUTPUT_WIDTH  {OUTPUT WIDTH} {Width of the AXIS data-out bus}
+core_parameter TRUNCATE      {TRUNCATE} {Select between truncation and rounding}
+core_parameter STAGES        {STAGES} {Number of pipeline stages (min=2)}
 
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_a]
 set_property NAME s_axis_a $bus
