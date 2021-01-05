@@ -7,27 +7,27 @@
 `endif
 
 module complex_multiplier
-    #(parameter INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 2
-      parameter INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 2
-      parameter OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
-      parameter STAGES `VL_RD = 3,  // minimum value is 2
-      parameter BLOCKING `VL_RD = 1,
-      parameter TRUNCATE `VL_RD = 1)
+    #(parameter integer INPUT_WIDTH_A `VL_RD = 16, // must be multiple of 2
+      parameter integer INPUT_WIDTH_B `VL_RD = 16, // must be multiple of 2
+      parameter integer OUTPUT_WIDTH `VL_RD = 32,  // must be multiple of 8
+      parameter integer STAGES `VL_RD = 3,  // minimum value is 2
+      parameter integer BLOCKING `VL_RD = 1,
+      parameter integer TRUNCATE `VL_RD = 1)
     (   
-        input wire              aclk, aresetn,
-		inout wire				rounding_cy,
+        input               aclk, aresetn,
+		input               rounding_cy,
         // slave a
         input signed            [((INPUT_WIDTH_A+15)/16)*16-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
-        input wire                            s_axis_a_tvalid,
+        input                                   s_axis_a_tvalid,
         // slave b
         input signed            [((INPUT_WIDTH_B+15)/16)*16-1:0] s_axis_b_tdata,
         output reg                            s_axis_b_tready,
-        input wire                            s_axis_b_tvalid,
+        input                                 s_axis_b_tvalid,
         // master output
         output reg signed		  [((OUTPUT_WIDTH+15)/16)*16-1:0] m_axis_tdata,
         output reg                          m_axis_tvalid,
-        input wire                           m_axis_tready
+        input                              m_axis_tready
         );
     // p = a*b = p_r + jp_i = (a_r*b_r - a_i*b_i) + j(a_r*b_i + a_i*b_r)
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
