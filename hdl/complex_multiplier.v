@@ -35,7 +35,7 @@ module complex_multiplier
     localparam INPUT_WIDTH_A = 2*OPERAND_WIDTH_A;
     localparam INPUT_WIDTH_B = 2*OPERAND_WIDTH_B;
     localparam OUTPUT_WIDTH = 2*OPERAND_WIDTH_OUT;
-    localparam TRUNC_BITS = INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH;
+    localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH)/2;
     localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;

@@ -29,7 +29,7 @@ class Model:
         # truncate
         # its important to do truncation after the + and - operation, 
         # if truncation is done before that, the result is slightly different!
-        truncate_bits = self.input_width_a + self.input_width_b - self.output_width
+        truncate_bits = (self.input_width_a + self.input_width_b - self.output_width)//2
         if self.truncate == 1:
             r_r = r_r >> truncate_bits
             r_i = r_i >> truncate_bits
