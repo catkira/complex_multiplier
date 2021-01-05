@@ -15,17 +15,9 @@ set bus [ipx::get_bus_interfaces -of_objects $core s_axis_a]
 set_property NAME s_axis_a $bus
 set_property INTERFACE_MODE slave $bus
 
-set bus [ipx::get_bus_interfaces aclk]
-set parameter [ipx::get_bus_parameters -of_objects $bus ASSOCIATED_BUSIF]
-set_property VALUE s_axis_a $parameter
-
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_b]
 set_property NAME s_axis_b $bus
 set_property INTERFACE_MODE slave $bus
-
-set bus [ipx::get_bus_interfaces aclk]
-set parameter [ipx::get_bus_parameters -of_objects $bus ASSOCIATED_BUSIF]
-set_property VALUE s_axis_b $parameter
 
 set bus [ipx::get_bus_interfaces -of_objects $core m_axis]
 set_property NAME m_axis $bus
@@ -33,4 +25,4 @@ set_property INTERFACE_MODE master $bus
 
 set bus [ipx::get_bus_interfaces aclk]
 set parameter [ipx::get_bus_parameters -of_objects $bus ASSOCIATED_BUSIF]
-set_property VALUE m_axis $parameter
+set_property VALUE s_axis_a:s_axis_b:m_axis $parameter
