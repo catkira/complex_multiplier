@@ -17,15 +17,15 @@ module complex_multiplier
         input               aclk, aresetn,
 		input               rounding_cy,
         // slave a
-        input signed            [((INPUT_WIDTH_A+15)/16)*16-1:0] s_axis_a_tdata,
+        input               [((INPUT_WIDTH_A+15)/16)*16-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
         input                                   s_axis_a_tvalid,
         // slave b
-        input signed            [((INPUT_WIDTH_B+15)/16)*16-1:0] s_axis_b_tdata,
+        input               [((INPUT_WIDTH_B+15)/16)*16-1:0] s_axis_b_tdata,
         output reg                            s_axis_b_tready,
         input                                 s_axis_b_tvalid,
         // master output
-        output reg signed		  [((OUTPUT_WIDTH+15)/16)*16-1:0] m_axis_tdata,
+        output reg  		  [((OUTPUT_WIDTH+15)/16)*16-1:0] m_axis_tdata,
         output reg                          m_axis_tvalid,
         input                              m_axis_tready
         );
