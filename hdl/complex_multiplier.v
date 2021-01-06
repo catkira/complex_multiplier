@@ -35,7 +35,7 @@ module complex_multiplier
     localparam INPUT_WIDTH_A = 2*OPERAND_WIDTH_A;
     localparam INPUT_WIDTH_B = 2*OPERAND_WIDTH_B;
     localparam OUTPUT_WIDTH = 2*OPERAND_WIDTH_OUT;
-    localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH)/2;
+    localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B + 2 - OUTPUT_WIDTH)/2;
     localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
@@ -44,36 +44,36 @@ module complex_multiplier
     reg        [STAGES:0]                      tvalid;
     reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
 
-    wire signed [INPUT_WIDTH_A/2-1:0] a_r;
-    wire signed [INPUT_WIDTH_A/2-1:0] a_i;
-    wire signed [INPUT_WIDTH_B/2-1:0] b_r;
-    wire signed [INPUT_WIDTH_B/2-1:0] b_i;
-    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A/2 + INPUT_WIDTH_A/2 - 1:AXIS_INPUT_WIDTH_A/2];
+    wire signed [OPERAND_WIDTH_A-1:0] a_r;
+    wire signed [OPERAND_WIDTH_A-1:0] a_i;
+    wire signed [OPERAND_WIDTH_B-1:0] b_r;
+    wire signed [OPERAND_WIDTH_B-1:0] b_i;
+    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A/2 + OPERAND_WIDTH_A - 1:AXIS_INPUT_WIDTH_A/2];
     // assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
-    assign a_r = s_axis_a_tdata[INPUT_WIDTH_A/2-1:0];
+    assign a_r = s_axis_a_tdata[OPERAND_WIDTH_A-1:0];
     // assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
-    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B/2 + INPUT_WIDTH_B/2 - 1:AXIS_INPUT_WIDTH_B/2];
-    assign b_r = s_axis_b_tdata[INPUT_WIDTH_B/2-1:0];
+    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B/2 + OPERAND_WIDTH_B - 1:AXIS_INPUT_WIDTH_B/2];
+    assign b_r = s_axis_b_tdata[OPERAND_WIDTH_B-1:0];
     
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
-    reg signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] ar_br, ai_bi, ar_bi, ai_br;
+    reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B:0] ar_br, ai_bi, ar_bi, ai_br;
 
-    wire signed [OUTPUT_WIDTH/2-1:0] result_r;
-    wire signed [OUTPUT_WIDTH/2-1:0] result_i;
+    wire signed [OPERAND_WIDTH_OUT-1:0] result_r;
+    wire signed [OPERAND_WIDTH_OUT-1:0] result_i;
     wire signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] temp1,temp2;
 	if (TRUNCATE == 1 || TRUNC_BITS == 0) begin
 		assign temp1 = (ar_br - ai_bi)>>>TRUNC_BITS;
 		assign temp2 = (ar_bi + ai_br)>>>TRUNC_BITS;  
-		assign result_r = temp1[OUTPUT_WIDTH/2-1:0];
-		assign result_i = temp2[OUTPUT_WIDTH/2-1:0];    
+		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
+		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
 	end
 	else begin
 		assign temp1 = (ar_br - ai_bi + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
 		assign temp2 = (ar_bi + ai_br + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
-		assign result_r = temp1[OUTPUT_WIDTH/2-1:0];
-		assign result_i = temp2[OUTPUT_WIDTH/2-1:0];    
+		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
+		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
 	end
 
 
@@ -126,16 +126,16 @@ module complex_multiplier
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
                 if (STAGES > 2) begin
-                    tdata[0] <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
-                        {(OUTPUT_PADDING/2){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
+                    tdata[0] <= {{(OUTPUT_PADDING/2){result_i[OPERAND_WIDTH_OUT - 1]}}, result_i,
+                        {(OUTPUT_PADDING/2){result_r[OPERAND_WIDTH_OUT - 1]}}, result_r};
                     for (i = 1; i<(STAGES-2); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
                     m_axis_dout_tdata <= tdata[STAGES-3];
                 end
                 else begin
-                    m_axis_dout_tdata <= {{(OUTPUT_PADDING/2){result_i[OUTPUT_WIDTH/2 - 1]}}, result_i,
-                        {(OUTPUT_PADDING/2){result_r[OUTPUT_WIDTH/2 - 1]}}, result_r};
+                    m_axis_dout_tdata <= {{(OUTPUT_PADDING/2){result_i[OPERAND_WIDTH_OUT - 1]}}, result_i,
+                        {(OUTPUT_PADDING/2){result_r[OPERAND_WIDTH_OUT - 1]}}, result_r};
                 end
             end
         end
