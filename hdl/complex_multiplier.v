@@ -60,8 +60,8 @@ module complex_multiplier
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
     reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B:0] ar_br, ai_bi, ar_bi, ai_br;
-    reg signed [OPERAND_WIDTH_A] a_r_buf, a_i_buf;
-    reg signed [OPERAND_WIDTH_B] b_r_buf, b_i_buf;
+    reg signed [OPERAND_WIDTH_A-1:0] a_r_buf, a_i_buf;
+    reg signed [OPERAND_WIDTH_B-1:0] b_r_buf, b_i_buf;
     reg                          a_valid_buf, b_valid_buf;
 
     wire signed [OPERAND_WIDTH_OUT-1:0] result_r;
