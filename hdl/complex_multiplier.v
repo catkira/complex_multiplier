@@ -41,6 +41,7 @@ module complex_multiplier
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
     localparam OUTPUT_PADDING = AXIS_OUTPUT_WIDTH - OUTPUT_WIDTH;
 
+    // output pipeline
     reg        [STAGES:0]                      tvalid;
     reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
 
@@ -59,6 +60,9 @@ module complex_multiplier
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
     reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B:0] ar_br, ai_bi, ar_bi, ai_br;
+    reg signed [OPERAND_WIDTH_A] a_r_buf, a_i_buf;
+    reg signed [OPERAND_WIDTH_B] b_r_buf, b_i_buf;
+    reg                          a_valid_buf, b_valid_buf;
 
     wire signed [OPERAND_WIDTH_OUT-1:0] result_r;
     wire signed [OPERAND_WIDTH_OUT-1:0] result_i;
@@ -89,6 +93,12 @@ module complex_multiplier
             ai_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
             ar_bi <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
             ar_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
+            a_r_buf <= {(INPUT_WIDTH_A){1'b0}};
+            a_i_buf <= {(INPUT_WIDTH_A){1'b0}};
+            b_r_buf <= {(INPUT_WIDTH_B){1'b0}};
+            b_i_buf <= {(INPUT_WIDTH_B){1'b0}};
+            a_valid_buf <= 0;
+            b_valid_buf <= 0;
         end
         else begin
             // wait for receiver to be ready if BLOCKING is enabled
@@ -102,10 +112,18 @@ module complex_multiplier
             else begin
                 s_axis_a_tready <= 1;
                 s_axis_b_tready <= 1;
-                ar_br <= a_r * b_r;
-                ai_bi <= a_i * b_i;
-                ar_bi <= a_r * b_i;
-                ai_br <= a_i * b_r;
+
+                a_r_buf <= a_r;
+                a_i_buf <= a_i;
+                b_r_buf <= b_r;
+                b_i_buf <= b_i;
+                a_valid_buf <= s_axis_a_tvalid;
+                b_valid_buf <= s_axis_b_tvalid;
+
+                ar_br <= a_r_buf * b_r_buf;
+                ai_bi <= a_i_buf * b_i_buf;
+                ar_bi <= a_r_buf * b_i_buf;
+                ai_br <= a_i_buf * b_r_buf;
                 
                 // propagate valid bit through pipeline
                 // if BLOCKING is enabled the inputs are only sampled when both inputs are valid at the same time
@@ -114,10 +132,10 @@ module complex_multiplier
                 // TODO: Implement separate sampling of input channels and then wait until both are sampled
                 // if BLOCKING is disabled, input data is sampled even if only one input is valid
                 if (BLOCKING == 1) begin
-                    tvalid[0] <= s_axis_a_tvalid & s_axis_b_tvalid;
+                    tvalid[0] <= a_valid_buf & b_valid_buf;
                 end
                 else begin
-                    tvalid[0] <= s_axis_a_tvalid | s_axis_b_tvalid;
+                    tvalid[0] <= a_valid_buf | b_valid_buf;
                 end
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
