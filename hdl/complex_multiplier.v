@@ -101,6 +101,14 @@ module complex_multiplier
             b_valid_buf <= 0;
         end
         else begin
+            // always take data into input pipeline
+            a_r_buf <= a_r;
+            a_i_buf <= a_i;
+            b_r_buf <= b_r;
+            b_i_buf <= b_i;
+            a_valid_buf <= s_axis_a_tvalid;
+            b_valid_buf <= s_axis_b_tvalid;
+
             // wait for receiver to be ready if BLOCKING is enabled
             if (BLOCKING == 1 && m_axis_dout_tready == 0 && m_axis_dout_tvalid == 1) begin 
                 m_axis_dout_tvalid <= 0;
@@ -113,12 +121,6 @@ module complex_multiplier
                 s_axis_a_tready <= 1;
                 s_axis_b_tready <= 1;
 
-                a_r_buf <= a_r;
-                a_i_buf <= a_i;
-                b_r_buf <= b_r;
-                b_i_buf <= b_i;
-                a_valid_buf <= s_axis_a_tvalid;
-                b_valid_buf <= s_axis_b_tvalid;
 
                 ar_br <= a_r_buf * b_r_buf;
                 ai_bi <= a_i_buf * b_i_buf;
