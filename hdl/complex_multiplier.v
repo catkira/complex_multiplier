@@ -14,8 +14,9 @@ module complex_multiplier
       parameter integer BLOCKING `VL_RD = 1,
       parameter integer TRUNCATE `VL_RD = 1)
     (   
-        input               aclk, aresetn,
-		input               rounding_cy,
+        input               aclk,
+        input               aresetn,
+		input               rounding_cy = 0,
         // slave a
         input               [((OPERAND_WIDTH_A*2+15)/16)*16-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
