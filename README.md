@@ -34,5 +34,7 @@ and run pytest in the repo directory
 ```
 pytest -v --workers 10
 ```
-
 Alternatively cocotb tests can be run by using the Makefile in the tests folder. To run in go into the tests folder an type "make clean; make" 
+
+## License
+GPL
