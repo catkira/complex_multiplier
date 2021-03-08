@@ -1,4 +1,4 @@
-#TITLE: Complex Multiplier with AXI Stream Interface
+# Complex Multiplier with AXI Stream Interface
 
 ## Overview
 The complex multiplier has two AXI stream inputs and one AXI stream output. It can be used in SDR (Software Defined Radio) applications, where up- or down-mixing is required.
