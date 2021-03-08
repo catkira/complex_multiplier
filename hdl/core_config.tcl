@@ -26,3 +26,6 @@ set_property INTERFACE_MODE master $bus
 set bus [ipx::get_bus_interfaces aclk]
 set parameter [ipx::get_bus_parameters -of_objects $bus ASSOCIATED_BUSIF]
 set_property VALUE S_AXIS_A:S_AXIS_B:M_AXIS_DOUT $parameter
+
+# set tie off to prevent vivado GUI warning
+set_property driver_value 0 [ipx::get_ports rounding_cy -of_objects [ipx::current_core]]
