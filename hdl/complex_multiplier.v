@@ -16,7 +16,7 @@ module complex_multiplier
     (   
         input               aclk,
         input               aresetn,
-		input               rounding_cy = 0,
+		input               rounding_cy,
         // slave a
         input               [((OPERAND_WIDTH_A*2+15)/16)*16-1:0] s_axis_a_tdata,
         output reg                            s_axis_a_tready,
