@@ -1,5 +1,4 @@
 from fixedpoint import FixedPoint
-from bitstring import BitArray
 
 class Model:
     def __init__(self, input_width_a, input_width_b, output_width , truncate):

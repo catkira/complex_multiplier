@@ -3,7 +3,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import Timer
 from cocotb.triggers import RisingEdge, ReadOnly
 from fixedpoint import FixedPoint
-from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink, AxiStreamMonitor
+from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink, AxiStreamBus
 from collections import deque
 
 import random
@@ -48,9 +48,9 @@ class TB(object):
         
         cocotb.fork(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
-        self.source_a = AxiStreamSource(dut, "s_axis_a", dut.aclk, byte_size=8)
-        self.source_b = AxiStreamSource(dut, "s_axis_b", dut.aclk, byte_size=8)
-        self.sink = AxiStreamSink(dut, "m_axis_dout", dut.aclk)        
+        self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
+        self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
+        self.sink = AxiStreamSink(AxiStreamBus(dut, "m_axis_dout"), dut.aclk, dut.aresetn, reset_active_level = False)        
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
