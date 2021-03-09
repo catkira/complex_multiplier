@@ -24,6 +24,10 @@ The code has been tested on a Xilinx Series 7 FPGA with Vivado 2020.2.
 - s_axis_b      : input b AXI Stream inteface
 - m_axis_dout   : output AXI Stream inteface
 
+## Rounding
+In this component random rounding is implemented. The input *rounding_cy* should be toggled randomly. If it is connected to 0, the core will do round-half-down, which has bias, but its still better than just truncation. This [document](https://www.xilinx.com/support/documentation/ip_documentation/cmpy/v6_0/pg104-cmpy.pdf) describes different signals that can be connected to *rounding_cy* to implement other unbiased rounding methods like round-towards-zero.
+See [here](https://github.com/catkira/CIC#rounding) for more explainations on this topic. 
+
 ## Verification
 To run the unit tests install
 - python >3.8
@@ -35,6 +39,9 @@ and run pytest in the repo directory
 pytest -v --workers 10
 ```
 Alternatively cocotb tests can be run by using the Makefile in the tests folder. To run in go into the tests folder an type "make clean; make" 
+
+## References
+- https://www.xilinx.com/support/documentation/ip_documentation/cmpy/v6_0/pg104-cmpy.pdf
 
 ## License
 GPL
