@@ -170,8 +170,8 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 @pytest.mark.parametrize("operand_width_b", [16, 32])
 @pytest.mark.parametrize("operand_width_out", [32, 22, 16])  # TODO: implement support for 24 bit output
 @pytest.mark.parametrize("blocking", [1])
-@pytest.mark.parametrize("round_mode", [0, 1])
-@pytest.mark.parametrize("stages", [3, 2])
+@pytest.mark.parametrize("round_mode", [1, 0])
+@pytest.mark.parametrize("stages", [7, 6])
 def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]

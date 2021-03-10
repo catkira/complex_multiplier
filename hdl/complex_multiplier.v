@@ -10,7 +10,7 @@ module complex_multiplier
     #(parameter integer OPERAND_WIDTH_A `VL_RD = 16, // must be multiple of 2
       parameter integer OPERAND_WIDTH_B `VL_RD = 16, // must be multiple of 2
       parameter integer OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
-      parameter integer STAGES `VL_RD = 3,  // minimum value is 2
+      parameter integer STAGES `VL_RD = 6,  // minimum value is 6
       parameter integer BLOCKING `VL_RD = 1,
       parameter integer ROUND_MODE `VL_RD = 0)
     (   
@@ -41,6 +41,7 @@ module complex_multiplier
     localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
     localparam OUTPUT_PADDING = AXIS_OUTPUT_WIDTH - OUTPUT_WIDTH;
+    localparam CALCULATION_STAGES = 6;    
 
     // output pipeline
     reg        [STAGES:0]                      tvalid;
@@ -53,51 +54,50 @@ module complex_multiplier
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
-    reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B : 0] ar_br, ai_bi, ar_bi, ai_br;
-    reg signed [OPERAND_WIDTH_A - 1 : 0] a_r_buf, a_i_buf;
-    reg signed [OPERAND_WIDTH_B - 1 : 0] b_r_buf, b_i_buf;
-    reg                          a_valid_buf, b_valid_buf;
-    reg                          rounding_cy_buf, rounding_cy_buf2;
+    reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B : 0] mult_r, mult_i, mult_0, common, common_r1, common_r2, p_r_int, p_i_int;
+    reg signed [OPERAND_WIDTH_A - 1 : 0] a_r_d, a_i_d, a_r_dd, a_i_dd, a_r_ddd, a_i_ddd, a_r_dddd, a_i_dddd;
+    reg signed [OPERAND_WIDTH_B - 1 : 0] b_r_d, b_i_d, b_r_dd, b_i_dd, b_r_ddd, b_i_ddd;
+    reg                          a_valid_d, b_valid_d;
+    reg signed [OPERAND_WIDTH_A : 0] a_dd_common;
+    reg signed [OPERAND_WIDTH_B : 0] a_dd_r, a_dd_i;
+    reg        [STAGES - 1 : 0]  rounding_cy_buf ;
 
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_r;
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_i;
     wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] temp1, temp2;
-    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, rounding_cy_buf2, {(TRUNC_BITS-1){~rounding_cy_buf2}}};
+    // round_cy decides if point5_correction is 0.5 (-> round half up) or 0.49999999999 (-> round half down)
+    localparam rounding_cy_buf_index = CALCULATION_STAGES - 1;
+    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, rounding_cy_buf[rounding_cy_buf_index], {(TRUNC_BITS-1){~rounding_cy_buf[rounding_cy_buf_index]}}};
 	if (ROUND_MODE == 0 || TRUNC_BITS == 0) begin
-		assign temp1 = (ar_br - ai_bi) >>> TRUNC_BITS;
-		assign temp2 = (ar_bi + ai_br) >>> TRUNC_BITS;  
+        assign temp1 = p_r_int >>> TRUNC_BITS;
+        assign temp2 = p_i_int >>> TRUNC_BITS;
 		assign result_r = temp1[OPERAND_WIDTH_OUT - 1 : 0];
 		assign result_i = temp2[OPERAND_WIDTH_OUT - 1 : 0];    
 	end
 	else begin
         // add 0.5 if rounding cy == 1, else add 0.499999999
-        assign temp1 = (ar_br - ai_bi + point5_correction) >>> TRUNC_BITS;
-        assign temp2 = (ar_bi + ai_br + point5_correction) >>> TRUNC_BITS;
+        assign temp1 = (p_r_int + point5_correction) >>> TRUNC_BITS;
+        assign temp2 = (p_i_int + point5_correction) >>> TRUNC_BITS;
 		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
 		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
 	end
-
 
     integer i;
     always @(posedge aclk) begin
         if (aresetn == 0) begin
             tvalid <= {{(STAGES+1){1'b0}}};
-            a_valid_buf <= 0;
-            b_valid_buf <= 0;
+            a_valid_d <= 0;
+            b_valid_d <= 0;
         end
         else begin
-            // always take data into input pipeline
-            a_r_buf <= a_r;
-            a_i_buf <= a_i;
-            b_r_buf <= b_r;
-            b_i_buf <= b_i;
-            if (ROUND_MODE == 1)
-                rounding_cy_buf <= rounding_cy;
-
-            a_valid_buf <= s_axis_a_tvalid;
-            b_valid_buf <= s_axis_b_tvalid;
-            rounding_cy_buf <= rounding_cy;
-            rounding_cy_buf2 <= rounding_cy_buf;
+            // stage 1
+            a_valid_d <= s_axis_a_tvalid;
+            b_valid_d <= s_axis_b_tvalid;
+            a_r_d <= a_r;
+            a_i_d <= a_i;
+            b_r_d <= b_r;
+            b_i_d <= b_i;
+            rounding_cy_buf[0] <= rounding_cy;
 
             // wait for receiver to be ready if BLOCKING is enabled
             if (BLOCKING == 1 && m_axis_dout_tready == 0 && m_axis_dout_tvalid == 1) begin 
@@ -111,11 +111,40 @@ module complex_multiplier
                 s_axis_a_tready <= 1;
                 s_axis_b_tready <= 1;
 
+                // stage 2
+                a_dd_common <= a_r_d - a_i_d;
+                a_r_dd <= a_r_d;
+                a_i_dd <= a_i_d;
+                b_r_dd <= b_r_d;
+                b_i_dd <= b_i_d;
 
-                ar_br <= a_r_buf * b_r_buf;
-                ai_bi <= a_i_buf * b_i_buf;
-                ar_bi <= a_r_buf * b_i_buf;
-                ai_br <= a_i_buf * b_r_buf;
+                // stage 3
+                a_r_ddd <= a_r_dd;
+                a_i_ddd <= a_i_dd;
+                b_r_ddd <= b_r_dd;
+                b_i_ddd <= b_i_dd;
+                mult_0 <= a_dd_common * b_i_dd;
+
+                // stage 4
+                a_r_dddd <= a_r_ddd;
+                a_i_dddd <= a_i_ddd;
+                a_dd_r <= b_r_ddd - b_i_ddd;
+                a_dd_i <= b_r_ddd + b_i_ddd;
+                common <= mult_0;
+
+                // stage 5
+                mult_r <= a_dd_r * a_r_dddd;
+                mult_i <= a_dd_i * a_i_dddd;
+                common_r1 <= common;
+                common_r2 <= common;
+
+                // stage 6
+                p_r_int <= mult_r + common_r1;
+                p_i_int <= mult_i + common_r2;
+
+                for (i = 1; i<STAGES; i = i + 1) begin
+                    rounding_cy_buf[i] <= rounding_cy_buf[i-1];
+                end
                 
                 // propagate valid bit through pipeline
                 // if BLOCKING is enabled the inputs are only sampled when both inputs are valid at the same time
@@ -124,10 +153,10 @@ module complex_multiplier
                 // TODO: Implement separate sampling of input channels and then wait until both are sampled
                 // if BLOCKING is disabled, input data is sampled even if only one input is valid
                 if (BLOCKING == 1) begin
-                    tvalid[0] <= a_valid_buf & b_valid_buf;
+                    tvalid[0] <= a_valid_d & b_valid_d;
                 end
                 else begin
-                    tvalid[0] <= a_valid_buf | b_valid_buf;
+                    tvalid[0] <= a_valid_d | b_valid_d;
                 end
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
@@ -135,17 +164,18 @@ module complex_multiplier
                 m_axis_dout_tvalid <= tvalid[STAGES-2];
                 
                 // propagate data through pipeline, 1 cycle is already used for calculation
-                if (STAGES > 2) begin
+
+                if (STAGES > CALCULATION_STAGES) begin
                     tdata[0] <= {{(OUTPUT_PADDING/2){result_i[OPERAND_WIDTH_OUT - 1]}}, result_i,
                         {(OUTPUT_PADDING/2){result_r[OPERAND_WIDTH_OUT - 1]}}, result_r};
-                    for (i = 1; i<(STAGES-2); i = i+1) begin
+                    for (i = 1; i<(STAGES-CALCULATION_STAGES); i = i+1) begin
                         tdata[i] <= tdata[i-1];
                     end
-                    m_axis_dout_tdata <= tdata[STAGES-3];
+                    m_axis_dout_tdata <= tdata[STAGES - CALCULATION_STAGES - 1];
                 end
                 else begin
-                    m_axis_dout_tdata <= {{(OUTPUT_PADDING/2){result_i[OPERAND_WIDTH_OUT - 1]}}, result_i,
-                        {(OUTPUT_PADDING/2){result_r[OPERAND_WIDTH_OUT - 1]}}, result_r};
+                     m_axis_dout_tdata <= {{(OUTPUT_PADDING/2){result_i[OPERAND_WIDTH_OUT - 1]}}, result_i,
+                         {(OUTPUT_PADDING/2){result_r[OPERAND_WIDTH_OUT - 1]}}, result_r};
                 end
             end
         end
