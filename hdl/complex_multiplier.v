@@ -18,7 +18,7 @@ module complex_multiplier
         input               aresetn,
 		input               rounding_cy,
         // slave a
-        input               [((OPERAND_WIDTH_A*2+15)/16)*16-1:0] s_axis_a_tdata,
+        input               [((OPERAND_WIDTH_A*2+15)/16)*16-1:0] s_axis_a_tdata, // round operands up to multiple of 8
         output reg                            s_axis_a_tready,
         input                                   s_axis_a_tvalid,
         // slave b
@@ -37,7 +37,7 @@ module complex_multiplier
     localparam INPUT_WIDTH_B = 2*OPERAND_WIDTH_B;
     localparam OUTPUT_WIDTH = 2*OPERAND_WIDTH_OUT;
     localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B + 2 - OUTPUT_WIDTH)/2;
-    localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;
+    localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;  // round operands up to multiple of 8
     localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
     localparam OUTPUT_PADDING = AXIS_OUTPUT_WIDTH - OUTPUT_WIDTH;
@@ -50,33 +50,33 @@ module complex_multiplier
     wire signed [OPERAND_WIDTH_A-1:0] a_i;
     wire signed [OPERAND_WIDTH_B-1:0] b_r;
     wire signed [OPERAND_WIDTH_B-1:0] b_i;
-    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A/2 + OPERAND_WIDTH_A - 1:AXIS_INPUT_WIDTH_A/2];
-    // assign a_i = s_axis_a_tdata[INPUT_WIDTH_A-1:INPUT_WIDTH_A/2];
-    assign a_r = s_axis_a_tdata[OPERAND_WIDTH_A-1:0];
-    // assign b_i = s_axis_b_tdata[INPUT_WIDTH_B-1:INPUT_WIDTH_B/2];
-    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B/2 + OPERAND_WIDTH_B - 1:AXIS_INPUT_WIDTH_B/2];
-    assign b_r = s_axis_b_tdata[OPERAND_WIDTH_B-1:0];
+    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : AXIS_INPUT_WIDTH_A / 2];
+    assign a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];
+    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : AXIS_INPUT_WIDTH_B / 2];
+    assign b_r = s_axis_b_tdata[OPERAND_WIDTH_B - 1 : 0];
     
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
-    reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B:0] ar_br, ai_bi, ar_bi, ai_br;
-    reg signed [OPERAND_WIDTH_A-1:0] a_r_buf, a_i_buf;
-    reg signed [OPERAND_WIDTH_B-1:0] b_r_buf, b_i_buf;
+    reg signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B : 0] ar_br, ai_bi, ar_bi, ai_br;
+    reg signed [OPERAND_WIDTH_A - 1 : 0] a_r_buf, a_i_buf;
+    reg signed [OPERAND_WIDTH_B - 1 : 0] b_r_buf, b_i_buf;
     reg                          a_valid_buf, b_valid_buf;
+    reg                          rounding_cy_buf, rounding_cy_buf2;
 
-    wire signed [OPERAND_WIDTH_OUT-1:0] result_r;
-    wire signed [OPERAND_WIDTH_OUT-1:0] result_i;
-    wire signed [INPUT_WIDTH_A+INPUT_WIDTH_B-1:0] temp1,temp2;
+    wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_r;
+    wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_i;
+    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] temp1, temp2;
+    localparam signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 2 - TRUNC_BITS){1'b0}}, {(TRUNC_BITS-1){1'b1}}};
 	if (TRUNCATE == 1 || TRUNC_BITS == 0) begin
-		assign temp1 = (ar_br - ai_bi)>>>TRUNC_BITS;
-		assign temp2 = (ar_bi + ai_br)>>>TRUNC_BITS;  
-		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
-		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
+		assign temp1 = (ar_br - ai_bi) >>> TRUNC_BITS;
+		assign temp2 = (ar_bi + ai_br) >>> TRUNC_BITS;  
+		assign result_r = temp1[OPERAND_WIDTH_OUT - 1 : 0];
+		assign result_i = temp2[OPERAND_WIDTH_OUT - 1 : 0];    
 	end
 	else begin
-		assign temp1 = (ar_br - ai_bi + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
-		assign temp2 = (ar_bi + ai_br + {{(INPUT_WIDTH_A+INPUT_WIDTH_B-2-TRUNC_BITS){1'b0}},{1'b0},{(TRUNC_BITS-1){1'b1}},{rounding_cy}})>>>TRUNC_BITS;
+		assign temp1 = (ar_br - ai_bi - point5_correction*(!rounding_cy_buf2) + rounding_cy_buf2*point5_correction) >>> TRUNC_BITS;
+		assign temp2 = (ar_bi + ai_br - point5_correction*(!rounding_cy_buf2) + rounding_cy_buf2*point5_correction) >>> TRUNC_BITS;
 		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
 		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
 	end
@@ -85,19 +85,7 @@ module complex_multiplier
     integer i;
     always @(posedge aclk) begin
         if (aresetn == 0) begin
-            m_axis_dout_tdata <= {(OUTPUT_WIDTH){1'b0}};
-            m_axis_dout_tvalid <= 0;
             tvalid <= {{(STAGES+1){1'b0}}};
-            for (i=0;i<(STAGES-1);i=i+1)
-                tdata[i] <= {OUTPUT_WIDTH{1'b0}};
-            ai_bi <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
-            ai_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
-            ar_bi <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
-            ar_br <= {(INPUT_WIDTH_A+INPUT_WIDTH_B){1'b0}};
-            a_r_buf <= {(INPUT_WIDTH_A){1'b0}};
-            a_i_buf <= {(INPUT_WIDTH_A){1'b0}};
-            b_r_buf <= {(INPUT_WIDTH_B){1'b0}};
-            b_i_buf <= {(INPUT_WIDTH_B){1'b0}};
             a_valid_buf <= 0;
             b_valid_buf <= 0;
         end
@@ -109,6 +97,8 @@ module complex_multiplier
             b_i_buf <= b_i;
             a_valid_buf <= s_axis_a_tvalid;
             b_valid_buf <= s_axis_b_tvalid;
+            rounding_cy_buf <= rounding_cy;
+            rounding_cy_buf2 <= rounding_cy_buf;
 
             // wait for receiver to be ready if BLOCKING is enabled
             if (BLOCKING == 1 && m_axis_dout_tready == 0 && m_axis_dout_tvalid == 1) begin 

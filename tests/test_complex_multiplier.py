@@ -26,6 +26,9 @@ class TB(object):
     def __init__(self,dut):
         random.seed(30) # reproducible tests
         self.dut = dut
+        self.operand_width_a = int(dut.OPERAND_WIDTH_A.value)
+        self.operand_width_b = int(dut.OPERAND_WIDTH_B.value)
+        self.operand_width_out = int(dut.OPERAND_WIDTH_OUT.value)
         self.input_width_a = int(dut.OPERAND_WIDTH_A.value)*2
         self.input_width_b = int(dut.OPERAND_WIDTH_B.value)*2
         self.output_width = int(dut.OPERAND_WIDTH_OUT.value)*2
@@ -44,7 +47,7 @@ class TB(object):
         spec = importlib.util.spec_from_file_location("complex_multiplier_model", model_dir)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        self.model = foo.Model(self.input_width_a,self.input_width_b,self.output_width,self.truncate) 
+        self.model = foo.Model(self.operand_width_a,self.operand_width_b,self.operand_width_out,self.truncate) 
         
         cocotb.fork(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
@@ -132,11 +135,11 @@ async def multiple_multiplications_(dut):
         a_bytes = tb.getRandomIQSample(tb.input_width_a)
         b_bytes = tb.getRandomIQSample(tb.input_width_b)
         
-        tb.dut.rounding_cy <= 0
+        tb.dut.rounding_cy <= i%2
         await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
         await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
-        
-        test_data = [a_bytes,b_bytes,tb.dut.rounding_cy]
+        print(F"rounding_cy send {i%2}")
+        test_data = [a_bytes,b_bytes,i%2]
         test_data_list.append(test_data)
         await RisingEdge(dut.aclk)
         
@@ -167,7 +170,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 @pytest.mark.parametrize("operand_width_b", [16, 32])
 @pytest.mark.parametrize("operand_width_out", [32, 22, 16])  # TODO: implement support for 24 bit output
 @pytest.mark.parametrize("blocking", [1])
-@pytest.mark.parametrize("truncate", [1, 0])
+@pytest.mark.parametrize("truncate", [0, 1])
 @pytest.mark.parametrize("stages", [3, 2])
 def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, truncate, stages):
     dut = "complex_multiplier"

@@ -25,7 +25,8 @@ The code has been tested on a Xilinx Series 7 FPGA with Vivado 2020.2.
 - m_axis_dout   : output AXI Stream inteface
 
 ## Rounding
-In this component random rounding is implemented. The input *rounding_cy* should be toggled randomly. If it is connected to 0, the core will do round-half-down, which has bias, but its still better than just truncation. This [document](https://www.xilinx.com/support/documentation/ip_documentation/cmpy/v6_0/pg104-cmpy.pdf) describes different signals that can be connected to *rounding_cy* to implement other unbiased rounding methods like round-towards-zero.
+If TRUNCATE is set to 1, truncation (aka round-towards-zero) will be used. This method has about half a bif dc offset in negative direction.
+If TRUNCATE is set to 0, random rounding will be used. The input *rounding_cy* is then used as tie-breaker and should be toggled randomly. If rounding_cy is permanently tied to 0, the core will do round-half-away-from-zero, which does not have overall bias but bias towards zero. This is still better than just truncation. This [document](https://www.xilinx.com/support/documentation/ip_documentation/cmpy/v6_0/pg104-cmpy.pdf) describes different signals that can be connected to *rounding_cy* to implement other unbiased rounding methods like round-towards-zero.
 See [here](https://github.com/catkira/CIC#rounding) for more explainations on this topic. 
 
 ## Verification
