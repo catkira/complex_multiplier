@@ -46,15 +46,10 @@ module complex_multiplier
     reg        [STAGES:0]                      tvalid;
     reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
 
-    wire signed [OPERAND_WIDTH_A-1:0] a_r;
-    wire signed [OPERAND_WIDTH_A-1:0] a_i;
-    wire signed [OPERAND_WIDTH_B-1:0] b_r;
-    wire signed [OPERAND_WIDTH_B-1:0] b_i;
-    assign a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : AXIS_INPUT_WIDTH_A / 2];
-    assign a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];
-    assign b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : AXIS_INPUT_WIDTH_B / 2];
-    assign b_r = s_axis_b_tdata[OPERAND_WIDTH_B - 1 : 0];
-    
+    wire signed [OPERAND_WIDTH_A-1:0] a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];;
+    wire signed [OPERAND_WIDTH_A-1:0] a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : AXIS_INPUT_WIDTH_A / 2];
+    wire signed [OPERAND_WIDTH_B-1:0] b_r = s_axis_b_tdata[OPERAND_WIDTH_B - 1 : 0];
+    wire signed [OPERAND_WIDTH_B-1:0] b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : AXIS_INPUT_WIDTH_B / 2];
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization

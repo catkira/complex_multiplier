@@ -33,7 +33,7 @@ class Model:
             r_r = r_r_full >> truncate_bits
             r_i = r_i_full >> truncate_bits
         else: 
-            # rounding by adding 0.5 (round half away from zero / towards inf) or 0.49999 (round half towards zero) depending on rounding_cy
+            # rounding by adding 0.5 (round half up) or 0.49999 (round half down) depending on rounding_cy followed by truncation
             biasCorrectionString = "0b"
             for _ in range(self.operand_width_a + self.operand_width_b + 1 - (truncate_bits)):
                 biasCorrectionString += "0"
