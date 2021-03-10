@@ -8,7 +8,7 @@ set_property DESCRIPTION $display_name $core
 core_parameter OPERAND_WIDTH_A {OPERAND WIDTH A} {Width of the data-in-a operands}
 core_parameter OPERAND_WIDTH_B {OPERAND WIDTH B} {Width of the data-in-b operands}
 core_parameter OPERAND_WIDTH_OUT  {OPERAND WIDTH OUT} {Width of the data-out operands}
-core_parameter TRUNCATE      {TRUNCATE} {Select between truncation and rounding}
+core_parameter ROUND_MODE      {ROUND MODE} {Does truncation if 0, random rounding with rounding_cy if 1}
 core_parameter STAGES        {STAGES} {Number of pipeline stages (min=2)}
 
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_a]

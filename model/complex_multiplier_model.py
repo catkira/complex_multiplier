@@ -1,11 +1,11 @@
 from fixedpoint import FixedPoint
 
 class Model:
-    def __init__(self, operand_width_a, operand_width_b, operand_width_out , truncate):
+    def __init__(self, operand_width_a, operand_width_b, operand_width_out , round_mode):
         self.operand_width_a = operand_width_a
         self.operand_width_b = operand_width_b
         self.operand_width_out = operand_width_out
-        self.truncate = truncate
+        self.round_mode = round_mode
 
         self.axis_input_width_a = ((self.operand_width_a+7)//8)*8*2
         self.axis_input_width_b = ((self.operand_width_b+7)//8)*8*2
@@ -29,7 +29,7 @@ class Model:
         # its important to do truncation after the + and - operation, 
         # if truncation is done before that, the result is slightly different!
         truncate_bits = (self.operand_width_a + self.operand_width_b + 1 - self.operand_width_out)
-        if self.truncate == 1:
+        if self.round_mode == 0:
             r_r = r_r_full >> truncate_bits
             r_i = r_i_full >> truncate_bits
         else: 

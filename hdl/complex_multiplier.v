@@ -12,7 +12,7 @@ module complex_multiplier
       parameter integer OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
       parameter integer STAGES `VL_RD = 3,  // minimum value is 2
       parameter integer BLOCKING `VL_RD = 1,
-      parameter integer TRUNCATE `VL_RD = 1)
+      parameter integer ROUND_MODE `VL_RD = 0)
     (   
         input               aclk,
         input               aresetn,
@@ -68,7 +68,7 @@ module complex_multiplier
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_i;
     wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] temp1, temp2;
     wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, rounding_cy_buf2, {(TRUNC_BITS-1){~rounding_cy_buf2}}};
-	if (TRUNCATE == 1 || TRUNC_BITS == 0) begin
+	if (ROUND_MODE == 0 || TRUNC_BITS == 0) begin
 		assign temp1 = (ar_br - ai_bi) >>> TRUNC_BITS;
 		assign temp2 = (ar_bi + ai_br) >>> TRUNC_BITS;  
 		assign result_r = temp1[OPERAND_WIDTH_OUT - 1 : 0];
@@ -96,6 +96,9 @@ module complex_multiplier
             a_i_buf <= a_i;
             b_r_buf <= b_r;
             b_i_buf <= b_i;
+            if (ROUND_MODE == 1)
+                rounding_cy_buf <= rounding_cy;
+
             a_valid_buf <= s_axis_a_tvalid;
             b_valid_buf <= s_axis_b_tvalid;
             rounding_cy_buf <= rounding_cy;

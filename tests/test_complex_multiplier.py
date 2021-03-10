@@ -33,7 +33,7 @@ class TB(object):
         self.input_width_b = int(dut.OPERAND_WIDTH_B.value)*2
         self.output_width = int(dut.OPERAND_WIDTH_OUT.value)*2
         self.stages = int(dut.STAGES.value)
-        self.truncate = int(dut.TRUNCATE.value)
+        self.round_mode = int(dut.ROUND_MODE.value)
 
         self.axis_input_width_a = ((self.input_width_a+15)//16)*16
         self.axis_input_width_b = ((self.input_width_b+15)//16)*16
@@ -47,7 +47,7 @@ class TB(object):
         spec = importlib.util.spec_from_file_location("complex_multiplier_model", model_dir)
         foo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(foo)
-        self.model = foo.Model(self.operand_width_a,self.operand_width_b,self.operand_width_out,self.truncate) 
+        self.model = foo.Model(self.operand_width_a,self.operand_width_b,self.operand_width_out,self.round_mode) 
         
         cocotb.fork(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
@@ -170,9 +170,9 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 @pytest.mark.parametrize("operand_width_b", [16, 32])
 @pytest.mark.parametrize("operand_width_out", [32, 22, 16])  # TODO: implement support for 24 bit output
 @pytest.mark.parametrize("blocking", [1])
-@pytest.mark.parametrize("truncate", [0, 1])
+@pytest.mark.parametrize("round_mode", [0, 1])
 @pytest.mark.parametrize("stages", [3, 2])
-def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, truncate, stages):
+def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -187,7 +187,7 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
     parameters['OPERAND_WIDTH_B'] = operand_width_b
     parameters['OPERAND_WIDTH_OUT'] = operand_width_out
     parameters['BLOCKING'] = blocking
-    parameters['TRUNCATE'] = truncate
+    parameters['ROUND_MODE'] = round_mode
     parameters['STAGES'] = stages
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
