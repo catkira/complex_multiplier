@@ -67,7 +67,7 @@ module complex_multiplier
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_r;
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_i;
     wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] temp1, temp2;
-    localparam signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 2 - TRUNC_BITS){1'b0}}, {(TRUNC_BITS-1){1'b1}}};
+    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, rounding_cy_buf2, {(TRUNC_BITS-1){~rounding_cy_buf2}}};
 	if (TRUNCATE == 1 || TRUNC_BITS == 0) begin
 		assign temp1 = (ar_br - ai_bi) >>> TRUNC_BITS;
 		assign temp2 = (ar_bi + ai_br) >>> TRUNC_BITS;  
@@ -75,8 +75,9 @@ module complex_multiplier
 		assign result_i = temp2[OPERAND_WIDTH_OUT - 1 : 0];    
 	end
 	else begin
-		assign temp1 = (ar_br - ai_bi - point5_correction*(!rounding_cy_buf2) + rounding_cy_buf2*point5_correction) >>> TRUNC_BITS;
-		assign temp2 = (ar_bi + ai_br - point5_correction*(!rounding_cy_buf2) + rounding_cy_buf2*point5_correction) >>> TRUNC_BITS;
+        // add 0.5 if rounding cy == 1, else add 0.499999999
+        assign temp1 = (ar_br - ai_bi + point5_correction) >>> TRUNC_BITS;
+        assign temp2 = (ar_bi + ai_br + point5_correction) >>> TRUNC_BITS;
 		assign result_r = temp1[OPERAND_WIDTH_OUT-1:0];
 		assign result_i = temp2[OPERAND_WIDTH_OUT-1:0];    
 	end

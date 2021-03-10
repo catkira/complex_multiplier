@@ -113,7 +113,7 @@ async def single_multiplication_(dut):
     byteOrder = 'big'
     [received_i, received_r] = tb.frameToIQ(rx_frame)
 
-    calculatedData = tb.model.calculate(a_bytes,b_bytes,tb.dut.rounding_cy)
+    calculatedData = tb.model.calculate(a_bytes,b_bytes,0)
     calculated_i = calculatedData[0:tb.axis_output_width//8//2]
     calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
     assert received_r == calculated_r, ("real part should have been %i but was %i " % 

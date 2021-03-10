@@ -33,27 +33,27 @@ class Model:
             r_r = r_r_full >> truncate_bits
             r_i = r_i_full >> truncate_bits
         else: 
-        # rounding by adding 0.5 plus random bit to prevent bias
+            # rounding by adding 0.5 (round half away from zero / towards inf) or 0.49999 (round half towards zero) depending on rounding_cy
             biasCorrectionString = "0b"
-            for _ in range(self.operand_width_a + self.operand_width_b + 1 - (truncate_bits - 1)):
+            for _ in range(self.operand_width_a + self.operand_width_b + 1 - (truncate_bits)):
                 biasCorrectionString += "0"
-            for _ in range(truncate_bits-1):
+            if rounding_cy:
                 biasCorrectionString += "1"
-            # if (rounding_cy == 1):
-            #     biasCorrectionString += "1"
-            # else:
-            #     biasCorrectionString += "0"
+                for _ in range(truncate_bits-1):
+                    biasCorrectionString += "0"
+            else:
+                biasCorrectionString += "0"
+                for _ in range(truncate_bits-1):
+                    biasCorrectionString += "1"
+
             biasCorrectionNumber = FixedPoint(biasCorrectionString, signed=True,m=self.operand_width_a + self.operand_width_b + 1,n=0)
-            if rounding_cy == 0:
-                biasCorrectionNumber *= -1                
-            print(F"r_r = {r_r_full} + {biasCorrectionNumber} >> {truncate_bits} = {(r_r_full + biasCorrectionNumber) >> truncate_bits}   cy = {rounding_cy}")
+            #print(F"r_r = {r_r_full} + {biasCorrectionNumber} >> {truncate_bits} = {(r_r_full + biasCorrectionNumber) >> truncate_bits}   cy = {rounding_cy}")
             r_r = (r_r_full + biasCorrectionNumber) >> truncate_bits
             r_i = (r_i_full + biasCorrectionNumber) >> truncate_bits
         
-        print(F"rounding error = {int(abs(r_r_full>> truncate_bits)) - int(abs(r_r))}")
+        #print(F"rounding error = {int(abs(r_r_full>> truncate_bits)) - int(abs(r_r))}")
         r_r = int(FixedPoint(r_r,m=self.operand_width_out,signed=signFlag,overflow_alert='ignore',overflow='wrap'))
         r_i = int(FixedPoint(r_i,m=self.operand_width_out,signed=signFlag,overflow_alert='ignore'))
-        print(F"convert {r_r} to {self.axis_output_width//8//2} bytes")
         r_bytes = r_r.to_bytes(byteorder=byteOrder,length=self.axis_output_width//8//2,signed=signFlag)
         i_bytes = r_i.to_bytes(byteorder=byteOrder,length=self.axis_output_width//8//2,signed=signFlag)
         result = bytearray(i_bytes)
