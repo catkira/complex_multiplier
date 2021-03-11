@@ -150,18 +150,8 @@ module complex_multiplier
                     rounding_cy_buf[i] <= rounding_cy_buf[i-1];
                 end
                 
-                // propagate valid bit through pipeline
-                // if BLOCKING is enabled the inputs are only sampled when both inputs are valid at the same time
-                // when only one input is valid, the output wont have valid set
-                // if only one input is valid, data loss occurs!
-                // TODO: Implement separate sampling of input channels and then wait until both are sampled
-                // if BLOCKING is disabled, input data is sampled even if only one input is valid
-                if (BLOCKING == 1) begin
-                    tvalid[0] <= a_valid_d & b_valid_d;
-                end
-                else begin
-                    tvalid[0] <= a_valid_d | b_valid_d;
-                end
+                // stages 1-6
+                tvalid[0] <= a_valid_d & b_valid_d;
                 for (i = 1; i<(STAGES); i = i+1) begin
                     tvalid[i] <= tvalid[i-1];
                 end
