@@ -65,9 +65,10 @@ module complex_multiplier
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_r;
     wire signed [OPERAND_WIDTH_OUT - 1 : 0] result_i;
     wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] temp1, temp2;
-    // round_cy decides if point5_correction is 0.5 (-> round half up) or 0.49999999999 (-> round half down)
     localparam rounding_cy_buf_index = CALCULATION_STAGES - 1;
-    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, rounding_cy_buf[rounding_cy_buf_index], {(TRUNC_BITS-1){~rounding_cy_buf[rounding_cy_buf_index]}}};
+    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] rounding_cy_extended = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B){1'b0}}, rounding_cy_buf[rounding_cy_buf_index]};
+    // round_cy decides if point5_correction is 0.5 (-> round half up) or 0.49999999999 (-> round half down)
+    wire signed [OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - 1 : 0] point5_correction = {{(OPERAND_WIDTH_A + OPERAND_WIDTH_B + 1 - TRUNC_BITS){1'b0}}, 1'b0, {(TRUNC_BITS-1){1'b1}}} + rounding_cy_extended;
 	if (ROUND_MODE == 0 || TRUNC_BITS == 0) begin
         assign temp1 = p_r_int >>> TRUNC_BITS;
         assign temp2 = p_i_int >>> TRUNC_BITS;
