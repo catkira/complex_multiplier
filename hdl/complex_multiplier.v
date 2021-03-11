@@ -98,7 +98,10 @@ module complex_multiplier
             a_i_d <= a_i;
             b_r_d <= b_r;
             b_i_d <= b_i;
-            rounding_cy_buf[0] <= rounding_cy;
+            if (ROUND_MODE == 1)
+                rounding_cy_buf[0] <= rounding_cy;
+            else if (ROUND_MODE == 2)  // clock divider
+                rounding_cy_buf[0] <= ~rounding_cy_buf[0];
 
             // wait for receiver to be ready if BLOCKING is enabled
             if (BLOCKING == 1 && m_axis_dout_tready == 0 && m_axis_dout_tvalid == 1) begin 
