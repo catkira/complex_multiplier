@@ -2,7 +2,6 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import Timer
 from cocotb.triggers import RisingEdge, ReadOnly
-from fixedpoint import FixedPoint
 from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink, AxiStreamBus
 from collections import deque
 

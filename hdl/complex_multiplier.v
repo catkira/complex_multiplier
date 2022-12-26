@@ -47,7 +47,7 @@ module complex_multiplier
     reg        [STAGES:0]                      tvalid;
     reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
 
-    wire signed [OPERAND_WIDTH_A-1:0] a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];;
+    wire signed [OPERAND_WIDTH_A-1:0] a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];
     wire signed [OPERAND_WIDTH_A-1:0] a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : AXIS_INPUT_WIDTH_A / 2];
     wire signed [OPERAND_WIDTH_B-1:0] b_r = s_axis_b_tdata[OPERAND_WIDTH_B - 1 : 0];
     wire signed [OPERAND_WIDTH_B-1:0] b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : AXIS_INPUT_WIDTH_B / 2];
