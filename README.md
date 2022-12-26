@@ -1,3 +1,5 @@
+[![Verify](https://github.com/catkira/complex_multiplier/actions/workflows/verify.yml/badge.svg)](https://github.com/catkira/complex_multiplier/actions/workflows/verify.yml)
+
 # Complex Multiplier with AXI Stream Interface
 
 ## Overview
