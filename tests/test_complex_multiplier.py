@@ -15,7 +15,6 @@ import pytest
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
-    from cocotb.generators.byte import random_data, get_bytes
 
 import importlib.util
 
@@ -82,10 +81,10 @@ class TB(object):
         self.dut.aresetn.setimmediatevalue(1)
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
-        self.dut.aresetn <= 0
+        self.dut.aresetn = 0
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
-        self.dut.aresetn <= 1
+        self.dut.aresetn = 1
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
 
@@ -143,8 +142,8 @@ async def multiple_multiplications_(dut):
         test_data_list.append(test_data)
         await RisingEdge(dut.aclk)
         
-    dut.s_axis_a_tvalid <= 0
-    dut.s_axis_b_tvalid <= 0
+    dut.s_axis_a_tvalid = 0
+    dut.s_axis_b_tvalid = 0
     await RisingEdge(dut.aclk)    
     byteOrder = 'big'
     for test_data in test_data_list:

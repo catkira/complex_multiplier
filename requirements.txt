@@ -1,0 +1,8 @@
+cocotb
+cocotb_test
+cocotbext-axi
+pytest
+pytest-parallel
+numpy
+py
+fixedpoint
