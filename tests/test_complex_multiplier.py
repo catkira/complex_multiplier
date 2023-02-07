@@ -200,3 +200,5 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
         extra_env=extra_env,
     )
 
+if __name__ == '__main__':
+    test_complex_multiplier(request = 0, blocking = 0, operand_width_a = 16, operand_width_b = 16, operand_width_out = 16, round_mode = 0, stages = 6)

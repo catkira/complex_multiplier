@@ -1,6 +1,6 @@
 cocotb
 cocotb_test
-cocotbext-axi
+cocotbext-axi==0.1.18
 pytest
 pytest-parallel
 numpy
