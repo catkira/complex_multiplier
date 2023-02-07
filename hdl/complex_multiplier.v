@@ -89,6 +89,7 @@ module complex_multiplier
             tvalid <= {{(STAGES+1){1'b0}}};
             a_valid_d <= 0;
             b_valid_d <= 0;
+            m_axis_dout_tvalid <= 0;
         end
         else begin
             // stage 1
