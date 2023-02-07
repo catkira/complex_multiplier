@@ -49,12 +49,10 @@ class TB(object):
         
         cocotb.start_soon(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
-        self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False,
-            byte_size=8, byte_lanes=1)
-        self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False,
-            byte_size=8, byte_lanes=1)
+        self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False)
+        self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False)
         self.sink = AxiStreamSink(AxiStreamBus(dut, "m_axis_dout"), dut.aclk, dut.aresetn, reset_active_level = False,
-            byte_lanes=1)        
+            byte_lanes=1)
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
@@ -128,9 +126,9 @@ async def single_multiplication_(dut):
 # Test multiple multiplications
 @cocotb.test()
 async def multiple_multiplications_(dut):
-    tb = TB(dut)    
+    tb = TB(dut)
     await tb.cycle_reset()
-    #tb.sink.queue = deque() # remove remaining items from last test    
+    #tb.sink.queue = deque() # remove remaining items from last test
     test_data_list = []
     for i in range(20):
         a_bytes = tb.getRandomIQSample(tb.input_width_a)
