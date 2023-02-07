@@ -49,9 +49,12 @@ class TB(object):
         
         cocotb.start_soon(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
-        self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
-        self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
-        self.sink = AxiStreamSink(AxiStreamBus(dut, "m_axis_dout"), dut.aclk, dut.aresetn, reset_active_level = False)        
+        self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False,
+            byte_size=8, byte_lanes=1)
+        self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False,
+            byte_size=8, byte_lanes=1)
+        self.sink = AxiStreamSink(AxiStreamBus(dut, "m_axis_dout"), dut.aclk, dut.aresetn, reset_active_level = False,
+            byte_lanes=1)        
         #self.monitor = AxiStreamMonitor(dut, "m_axis", dut.aclk)
 
     def frameToIQ(self, rx_frame):
