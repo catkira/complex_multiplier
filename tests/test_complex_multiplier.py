@@ -47,7 +47,7 @@ class TB(object):
         spec.loader.exec_module(foo)
         self.model = foo.Model(self.operand_width_a,self.operand_width_b,self.operand_width_out,self.round_mode) 
         
-        cocotb.fork(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
+        cocotb.start_soon(Clock(dut.aclk, CLK_PERIOD_NS, units='ns').start())
         
         self.source_a = AxiStreamSource(AxiStreamBus(dut, "s_axis_a"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
         self.source_b = AxiStreamSource(AxiStreamBus(dut, "s_axis_b"), dut.aclk, dut.aresetn, reset_active_level = False, byte_size=8)
@@ -80,10 +80,10 @@ class TB(object):
         self.dut.aresetn.setimmediatevalue(1)
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
-        self.dut.aresetn = 0
+        self.dut.aresetn.value = 0
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
-        self.dut.aresetn = 1
+        self.dut.aresetn.value = 1
         await RisingEdge(self.dut.aclk)
         await RisingEdge(self.dut.aclk)
 
@@ -98,15 +98,15 @@ async def single_multiplication_(dut):
     """
     tb = TB(dut)
     await tb.cycle_reset()
-    
+
     a_bytes = tb.getRandomIQSample(tb.input_width_a)
     b_bytes = tb.getRandomIQSample(tb.input_width_b)
 
     # send data, ignore tready
-    tb.dut.rounding_cy <= 0
+    tb.dut.rounding_cy.value = 0
     await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
     await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
-        
+ 
     rx_frame = await tb.sink.recv()
     byteOrder = 'big'
     [received_i, received_r] = tb.frameToIQ(rx_frame)
@@ -114,7 +114,7 @@ async def single_multiplication_(dut):
     calculatedData = tb.model.calculate(a_bytes,b_bytes,0)
     calculated_i = calculatedData[0:tb.axis_output_width//8//2]
     calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
-    assert received_r == calculated_r, ("real part should have been %i but was %i " % 
+    assert received_r == calculated_r, ("real part should have been %i but was %i " %
                            (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),
                            int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
     assert received_i== calculated_i, ("imaginary part should have been %i but was %i " % 
@@ -132,15 +132,15 @@ async def multiple_multiplications_(dut):
     for i in range(20):
         a_bytes = tb.getRandomIQSample(tb.input_width_a)
         b_bytes = tb.getRandomIQSample(tb.input_width_b)
-        
-        tb.dut.rounding_cy <= i%2
+
+        tb.dut.rounding_cy.value = i%2
         await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
         await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
         print(F"rounding_cy send {i%2}")
         test_data = [a_bytes,b_bytes,i%2]
         test_data_list.append(test_data)
         await RisingEdge(dut.aclk)
-        
+
     dut.s_axis_a_tvalid = 0
     dut.s_axis_b_tvalid = 0
     await RisingEdge(dut.aclk)    
@@ -158,7 +158,7 @@ async def multiple_multiplications_(dut):
                             (int.from_bytes(calculated_i,byteorder=byteOrder,signed=True),int.from_bytes(received_i,byteorder=byteOrder,signed=True)))
         assert calculatedData == tb.frameToBytes(rx_frame), ("Error, expected %s got %s" % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
         await RisingEdge(dut.aclk)
-        
+
 # cocotb-test
 
 tests_dir = os.path.abspath(os.path.dirname(__file__))
@@ -200,4 +200,3 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
         extra_env=extra_env,
     )
 
-        
