@@ -128,17 +128,18 @@ async def single_multiplication_(dut):
 async def multiple_multiplications_(dut):
     tb = TB(dut)
     await tb.cycle_reset()
+    rounding_cy = int(os.environ['ROUNDING_CY'])
     #tb.sink.queue = deque() # remove remaining items from last test
     test_data_list = []
     for i in range(20):
         a_bytes = tb.getRandomIQSample(tb.input_width_a)
         b_bytes = tb.getRandomIQSample(tb.input_width_b)
 
-        tb.dut.rounding_cy.value = i%2
+        tb.dut.rounding_cy.value = rounding_cy
         await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
         await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
-        print(F"rounding_cy send {i%2}")
-        test_data = [a_bytes,b_bytes,i%2]
+        print(F"rounding_cy send {rounding_cy}")
+        test_data = [a_bytes,b_bytes, rounding_cy]
         test_data_list.append(test_data)
         await RisingEdge(dut.aclk)
 
@@ -171,7 +172,8 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 @pytest.mark.parametrize("blocking", [1])
 @pytest.mark.parametrize("round_mode", [1, 0])
 @pytest.mark.parametrize("stages", [7, 6])
-def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages):
+@pytest.mark.parametrize("rounding_cy", [0, 1])
+def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages, rounding_cy):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -189,8 +191,11 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
     parameters['ROUND_MODE'] = round_mode
     parameters['STAGES'] = stages
 
-    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
-    sim_build="sim_build/" + "_".join(("{}={}".format(*i) for i in parameters.items()))
+    parameters_dirname = parameters.copy()
+    os.environ['ROUNDING_CY'] = str(rounding_cy)
+    parameters_dirname['ROUNDING_CY'] = rounding_cy
+    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters_dirname.items()}
+    sim_build="sim_build/" + "_".join(("{}={}".format(*i) for i in parameters_dirname.items()))
     cocotb_test.simulator.run(
         python_search=[tests_dir],
         verilog_sources=verilog_sources,
@@ -202,4 +207,4 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
     )
 
 if __name__ == '__main__':
-    test_complex_multiplier(request = 0, blocking = 0, operand_width_a = 16, operand_width_b = 16, operand_width_out = 16, round_mode = 0, stages = 6)
+    test_complex_multiplier(request = 0, blocking = 0, operand_width_a = 16, operand_width_b = 16, operand_width_out = 16, round_mode = 0, stages = 6, rounding_cy = 1)
