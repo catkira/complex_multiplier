@@ -1,9 +1,7 @@
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import Timer
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import RisingEdge
 from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink, AxiStreamBus
-from collections import deque
 
 import random
 import warnings
@@ -115,12 +113,12 @@ async def single_multiplication_(dut):
     calculatedData = tb.model.calculate(a_bytes,b_bytes,0)
     calculated_i = calculatedData[0:tb.axis_output_width//8//2]
     calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
-    assert received_r == calculated_r, ("real part should have been %i but was %i " %
+    assert received_r == calculated_r, ('real part should have been %i but was %i ' %
                            (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),
                            int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
-    assert received_i== calculated_i, ("imaginary part should have been %i but was %i " % 
+    assert received_i== calculated_i, ('imaginary part should have been %i but was %i ' % 
                            (int.from_bytes(calculated_i,byteorder=byteOrder,signed=True),int.from_bytes(received_i,byteorder=byteOrder,signed=True)))
-    assert calculatedData == tb.frameToBytes(rx_frame), ("Error, expected %s got %s" % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
+    assert calculatedData == tb.frameToBytes(rx_frame), ('Error, expected %s got %s' % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
     await RisingEdge(dut.aclk)
 
 # Test multiple multiplications
@@ -128,23 +126,24 @@ async def single_multiplication_(dut):
 async def multiple_multiplications_(dut):
     tb = TB(dut)
     await tb.cycle_reset()
-    #tb.sink.queue = deque() # remove remaining items from last test
+
+    rounding_cy = int(os.environ['ROUNDING_CY'])
     test_data_list = []
     for i in range(20):
         a_bytes = tb.getRandomIQSample(tb.input_width_a)
         b_bytes = tb.getRandomIQSample(tb.input_width_b)
 
-        tb.dut.rounding_cy.value = i%2
+        tb.dut.rounding_cy.value = rounding_cy
         await tb.source_a.send(AxiStreamFrame(a_bytes[::-1]))
         await tb.source_b.send(AxiStreamFrame(b_bytes[::-1]))
-        print(F"rounding_cy send {i%2}")
-        test_data = [a_bytes,b_bytes,i%2]
+        print(F"rounding_cy send {rounding_cy}")
+        test_data = [a_bytes,b_bytes, rounding_cy]
         test_data_list.append(test_data)
         await RisingEdge(dut.aclk)
 
     dut.s_axis_a_tvalid = 0
     dut.s_axis_b_tvalid = 0
-    await RisingEdge(dut.aclk)    
+    await RisingEdge(dut.aclk)
     byteOrder = 'big'
     for test_data in test_data_list:
         rx_frame = await tb.sink.recv()
@@ -153,11 +152,11 @@ async def multiple_multiplications_(dut):
         calculatedData = tb.model.calculate(test_data[0],test_data[1],test_data[2])
         calculated_i = calculatedData[0:tb.axis_output_width//8//2]
         calculated_r = calculatedData[tb.axis_output_width//8//2:tb.axis_output_width//8]
-        assert received_r == calculated_r, ("real part should have been %i but was %i " % 
+        assert received_r == calculated_r, ('real part should have been %i but was %i ' % 
                             (int.from_bytes(calculated_r,byteorder=byteOrder,signed=True),int.from_bytes(received_r,byteorder=byteOrder,signed=True)))
-        assert received_i == calculated_i, ("imaginary part should have been %i but was %i " % 
+        assert received_i == calculated_i, ('imaginary part should have been %i but was %i ' % 
                             (int.from_bytes(calculated_i,byteorder=byteOrder,signed=True),int.from_bytes(received_i,byteorder=byteOrder,signed=True)))
-        assert calculatedData == tb.frameToBytes(rx_frame), ("Error, expected %s got %s" % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
+        assert calculatedData == tb.frameToBytes(rx_frame), ('Error, expected %s got %s' % (calculatedData.hex(), tb.frameToBytes(rx_frame).hex()))
         await RisingEdge(dut.aclk)
 
 # cocotb-test
@@ -171,7 +170,8 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', 'hdl'))
 @pytest.mark.parametrize("blocking", [1])
 @pytest.mark.parametrize("round_mode", [1, 0])
 @pytest.mark.parametrize("stages", [7, 6])
-def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages):
+@pytest.mark.parametrize("rounding_cy", [0, 1])
+def test_complex_multiplier(blocking, operand_width_a, operand_width_b, operand_width_out, round_mode, stages, rounding_cy):
     dut = "complex_multiplier"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -188,9 +188,12 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
     parameters['BLOCKING'] = blocking
     parameters['ROUND_MODE'] = round_mode
     parameters['STAGES'] = stages
-
-    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
-    sim_build="sim_build/" + "_".join(("{}={}".format(*i) for i in parameters.items()))
+    
+    os.environ['ROUNDING_CY'] = str(rounding_cy)
+    parameters_dirname = parameters.copy()
+    parameters_dirname['ROUNDING_CY'] = rounding_cy
+    extra_env = {f'PARAM_{k}': str(v) for k, v in parameters_dirname.items()}
+    sim_build="sim_build/" + "_".join(('{}={}'.format(*i) for i in parameters_dirname.items()))
     cocotb_test.simulator.run(
         python_search=[tests_dir],
         verilog_sources=verilog_sources,
@@ -202,4 +205,4 @@ def test_complex_multiplier(request, blocking, operand_width_a, operand_width_b,
     )
 
 if __name__ == '__main__':
-    test_complex_multiplier(request = 0, blocking = 0, operand_width_a = 16, operand_width_b = 16, operand_width_out = 16, round_mode = 0, stages = 6)
+    test_complex_multiplier(blocking = 0, operand_width_a = 16, operand_width_b = 16, operand_width_out = 16, round_mode = 0, stages = 6, rounding_cy = 0)
