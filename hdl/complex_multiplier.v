@@ -12,7 +12,9 @@ module complex_multiplier
       parameter integer OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
       parameter integer STAGES `VL_RD = 6,  // minimum value is 6
       parameter integer BLOCKING `VL_RD = 1,
-      parameter integer ROUND_MODE `VL_RD = 0)
+      parameter integer ROUND_MODE `VL_RD = 0,
+      parameter integer GROWTH_BITS `VL_RD = 0  // this can be set to -1 or -2 if inputs guarantee less than worst case bit growth
+    )
     (   
         input               aclk,
         input               aresetn,
@@ -36,7 +38,7 @@ module complex_multiplier
     localparam INPUT_WIDTH_A = 2*OPERAND_WIDTH_A;
     localparam INPUT_WIDTH_B = 2*OPERAND_WIDTH_B;
     localparam OUTPUT_WIDTH = 2*OPERAND_WIDTH_OUT;
-    localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B + 2 - OUTPUT_WIDTH)/2;
+    localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH)/2 + 1 + GROWTH_BITS;
     localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;  // round operands up to multiple of 8
     localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
     localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
