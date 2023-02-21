@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ns
 
 `ifdef VERILATOR  // make parameter readable from VPI
   `define VL_RD /*verilator public_flat_rd*/
@@ -7,52 +7,54 @@
 `endif
 
 module complex_multiplier
-    #(parameter integer OPERAND_WIDTH_A `VL_RD = 16, // must be multiple of 2
-      parameter integer OPERAND_WIDTH_B `VL_RD = 16, // must be multiple of 2
-      parameter integer OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
-      parameter integer STAGES `VL_RD = 6,  // minimum value is 6
-      parameter integer BLOCKING `VL_RD = 1,
-      parameter integer ROUND_MODE `VL_RD = 0,
-      parameter integer GROWTH_BITS `VL_RD = 0  // this can be set to -1 or -2 if inputs guarantee less than worst case bit growth
+    #(parameter integer     OPERAND_WIDTH_A `VL_RD = 16, // must be multiple of 2
+      parameter integer     OPERAND_WIDTH_B `VL_RD = 16, // must be multiple of 2
+      parameter integer     OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
+      parameter integer     STAGES `VL_RD = 6,  // minimum value is 6
+      parameter             BLOCKING `VL_RD = 1,
+      parameter             ROUND_MODE `VL_RD = 0,
+      parameter integer     GROWTH_BITS `VL_RD = 0,  // this can be set to -1 or -2 if inputs guarantee less than worst case bit growth
+      parameter             BYTE_ALIGNED `VL_RD = 1,
+
+      localparam            EFF_PORT_WIDTH_A = BYTE_ALIGNED ? ((OPERAND_WIDTH_A*2+15)/16)*16 : OPERAND_WIDTH_A * 2,
+      localparam            EFF_PORT_WIDTH_B = BYTE_ALIGNED ? ((OPERAND_WIDTH_B*2+15)/16)*16 : OPERAND_WIDTH_B * 2,
+      localparam            EFF_PORT_WIDTH_OUT = BYTE_ALIGNED ? ((OPERAND_WIDTH_OUT*2+15)/16)*16 : OPERAND_WIDTH_OUT * 2
     )
     (   
-        input               aclk,
-        input               aresetn,
-		input               rounding_cy,
+        input                                           aclk,
+        input                                           aresetn,
+		input                                           rounding_cy,
         // slave a
-        input               [((OPERAND_WIDTH_A*2+15)/16)*16-1:0] s_axis_a_tdata, // round operands up to multiple of 8
-        output reg                            s_axis_a_tready,
-        input                                   s_axis_a_tvalid,
+        input               [EFF_PORT_WIDTH_A - 1 : 0]    s_axis_a_tdata,
+        output reg                                      s_axis_a_tready,
+        input                                           s_axis_a_tvalid,
         // slave b
-        input               [((OPERAND_WIDTH_B*2+15)/16)*16-1:0] s_axis_b_tdata,
-        output reg                            s_axis_b_tready,
-        input                                 s_axis_b_tvalid,
+        input               [EFF_PORT_WIDTH_B - 1 : 0]    s_axis_b_tdata,
+        output reg                                      s_axis_b_tready,
+        input                                           s_axis_b_tvalid,
         // master output
-        output reg  		  [((OPERAND_WIDTH_OUT*2+15)/16)*16-1:0] m_axis_dout_tdata,
-        output reg                          m_axis_dout_tvalid,
-        input                              m_axis_dout_tready
+        output reg  		[EFF_PORT_WIDTH_OUT - 1 : 0]  m_axis_dout_tdata,
+        output reg                                      m_axis_dout_tvalid,
+        input                                           m_axis_dout_tready
         );
     // p = a*b = p_r + jp_i = (a_r*b_r - a_i*b_i) + j(a_r*b_i + a_i*b_r)
     // stage1: calculate a_r*b_r, a_i*b_i, a_r*b_i, a_i*b_r
     // stage2: calculate p_r and p_i
-    localparam INPUT_WIDTH_A = 2*OPERAND_WIDTH_A;
-    localparam INPUT_WIDTH_B = 2*OPERAND_WIDTH_B;
-    localparam OUTPUT_WIDTH = 2*OPERAND_WIDTH_OUT;
+    localparam INPUT_WIDTH_A = OPERAND_WIDTH_A * 2;
+    localparam INPUT_WIDTH_B = OPERAND_WIDTH_B * 2;
+    localparam OUTPUT_WIDTH  = OPERAND_WIDTH_OUT * 2;
     localparam TRUNC_BITS = (INPUT_WIDTH_A + INPUT_WIDTH_B - OUTPUT_WIDTH)/2 + 1 + GROWTH_BITS;
-    localparam AXIS_OUTPUT_WIDTH = ((OUTPUT_WIDTH+15)/16)*16;  // round operands up to multiple of 8
-    localparam AXIS_INPUT_WIDTH_A = ((INPUT_WIDTH_A+15)/16)*16;
-    localparam AXIS_INPUT_WIDTH_B = ((INPUT_WIDTH_B+15)/16)*16;
-    localparam OUTPUT_PADDING = AXIS_OUTPUT_WIDTH - OUTPUT_WIDTH;
+    localparam OUTPUT_PADDING = EFF_PORT_WIDTH_OUT - OUTPUT_WIDTH;
     localparam CALCULATION_STAGES = 6;    
 
     // output pipeline
-    reg        [STAGES:0]                      tvalid;
-    reg        [AXIS_OUTPUT_WIDTH-1:0]         tdata [STAGES-2:0];
+    reg        [STAGES : 0]                     tvalid;
+    reg        [EFF_PORT_WIDTH_OUT-1:0]         tdata [STAGES-2:0];
 
     wire signed [OPERAND_WIDTH_A-1:0] a_r = s_axis_a_tdata[OPERAND_WIDTH_A - 1 : 0];
-    wire signed [OPERAND_WIDTH_A-1:0] a_i = s_axis_a_tdata[AXIS_INPUT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : AXIS_INPUT_WIDTH_A / 2];
+    wire signed [OPERAND_WIDTH_A-1:0] a_i = s_axis_a_tdata[EFF_PORT_WIDTH_A / 2 + OPERAND_WIDTH_A - 1 : EFF_PORT_WIDTH_A / 2];
     wire signed [OPERAND_WIDTH_B-1:0] b_r = s_axis_b_tdata[OPERAND_WIDTH_B - 1 : 0];
-    wire signed [OPERAND_WIDTH_B-1:0] b_i = s_axis_b_tdata[AXIS_INPUT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : AXIS_INPUT_WIDTH_B / 2];
+    wire signed [OPERAND_WIDTH_B-1:0] b_i = s_axis_b_tdata[EFF_PORT_WIDTH_B / 2 + OPERAND_WIDTH_B - 1 : EFF_PORT_WIDTH_B / 2];
 
     // intermediate products are calculated with full precision, this can be optimized in the case of truncation
     // the synthesizer hopefully does this optimization
@@ -87,8 +89,8 @@ module complex_multiplier
 
     integer i;
     always @(posedge aclk) begin
-        if (aresetn == 0) begin
-            tvalid <= {{(STAGES+1){1'b0}}};
+        if (!aresetn) begin
+            tvalid <= '0;
             a_valid_d <= 0;
             b_valid_d <= 0;
             m_axis_dout_tvalid <= 0;
