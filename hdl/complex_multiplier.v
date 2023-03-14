@@ -90,7 +90,7 @@ module complex_multiplier
     integer i;
     always @(posedge aclk) begin
         if (!aresetn) begin
-            tvalid <= '0;
+            tvalid <= 0;
             a_valid_d <= 0;
             b_valid_d <= 0;
             m_axis_dout_tvalid <= 0;
