@@ -10,6 +10,7 @@ core_parameter OPERAND_WIDTH_B {OPERAND WIDTH B} {Width of the data-in-b operand
 core_parameter OPERAND_WIDTH_OUT  {OPERAND WIDTH OUT} {Width of the data-out operands}
 core_parameter ROUND_MODE      {ROUND MODE} {Does truncation if 0, random rounding with rounding_cy if 1}
 core_parameter STAGES        {STAGES} {Number of pipeline stages (min=2)}
+core_parameter BYTE_ALIGNED        {BYTE_ALIGNED} {select whether port sizes have to be multiples of 8}
 
 set bus [ipx::get_bus_interfaces -of_objects $core s_axis_a]
 set_property NAME S_AXIS_A $bus

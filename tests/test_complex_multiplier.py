@@ -234,7 +234,7 @@ def test_complex_multiplier(blocking, operand_width_a, operand_width_b, operand_
     toplevel = dut
 
     verilog_sources = [
-        os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, f"{dut}.sv"),
     ]
 
     parameters = {}

@@ -1,20 +1,14 @@
 `timescale 1ns / 1ns
 
-`ifdef VERILATOR  // make parameter readable from VPI
-  `define VL_RD /*verilator public_flat_rd*/
-`else
-  `define VL_RD
-`endif
-
 module complex_multiplier
-    #(parameter integer     OPERAND_WIDTH_A `VL_RD = 16, // must be multiple of 2
-      parameter integer     OPERAND_WIDTH_B `VL_RD = 16, // must be multiple of 2
-      parameter integer     OPERAND_WIDTH_OUT `VL_RD = 32,  // must be multiple of 8
-      parameter integer     STAGES `VL_RD = 6,  // minimum value is 6
-      parameter             BLOCKING `VL_RD = 1,
-      parameter             ROUND_MODE `VL_RD = 0,
-      parameter integer     GROWTH_BITS `VL_RD = 0,  // this can be set to -1 or -2 if inputs guarantee less than worst case bit growth
-      parameter             BYTE_ALIGNED `VL_RD = 1,
+    #(parameter integer     OPERAND_WIDTH_A = 16, // must be multiple of 2
+      parameter integer     OPERAND_WIDTH_B = 16, // must be multiple of 2
+      parameter integer     OPERAND_WIDTH_OUT = 32,  // must be multiple of 8
+      parameter integer     STAGES = 6,  // minimum value is 6
+      parameter             BLOCKING = 1,
+      parameter             ROUND_MODE = 0,
+      parameter integer     GROWTH_BITS = 0,  // this can be set to -1 or -2 if inputs guarantee less than worst case bit growth
+      parameter             BYTE_ALIGNED = 1,
 
       localparam            EFF_PORT_WIDTH_A = BYTE_ALIGNED ? ((OPERAND_WIDTH_A*2+15)/16)*16 : OPERAND_WIDTH_A * 2,
       localparam            EFF_PORT_WIDTH_B = BYTE_ALIGNED ? ((OPERAND_WIDTH_B*2+15)/16)*16 : OPERAND_WIDTH_B * 2,
